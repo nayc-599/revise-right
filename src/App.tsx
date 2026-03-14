@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AppShell } from './components/layout/AppShell';
 import { HomePage } from './pages/HomePage';
+import { TaskManagerPage } from './pages/TaskManagerPage';
 import { GameChoicePage } from './pages/GameChoicePage';
 import { GameShootingPage } from './pages/GameShootingPage';
 import { GameWheelPage } from './pages/GameWheelPage';
@@ -14,6 +15,7 @@ function App() {
       <AppShell>
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/tasks" element={<TaskManagerPage />} />
           <Route path="/quiz" element={<QuizPage />} />
           <Route path="/game-choice" element={<GameChoicePage />} />
           <Route path="/game/shooting" element={<GameShootingPage />} />

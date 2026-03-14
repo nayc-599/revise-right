@@ -12,17 +12,20 @@ from . import QTableSimulator as QTS
 
 st.set_page_config(page_title="AI Study Planner", layout="wide")
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
+# Helper functions
 
 DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 def ensure_state():
     if "tasks" not in st.session_state:
         st.session_state.tasks = []       # list of Task objects
+        
     if "id_counter" not in st.session_state:
         st.session_state.id_counter = 0
+        
     if "schedule" not in st.session_state:
         st.session_state.schedule = None  # dict {1-7: [task_ids]}
+        
     if "schedule_score" not in st.session_state:
         st.session_state.schedule_score = None
 
@@ -46,7 +49,7 @@ def forgetting_curve_points(task: "Task.Task", days: int = 14):
         rows.append({"Day": d, "Retention": round(r, 4), "Task": task.TaskName})
     return rows
 
-# ── App layout ───────────────────────────────────────────────────────────────
+# App layout 
 
 ensure_state()
 st.title("🎓 AI Study Planner")
@@ -56,9 +59,7 @@ tab_add, tab_tasks, tab_plan, tab_curve = st.tabs(
     ["➕ Add Tasks", "📋 My Tasks", "📅 Generate Plan", "📉 Forgetting Curves"]
 )
 
-# ════════════════════════════════════════════════════════════════════════════
-# TAB 1 — Add Tasks
-# ════════════════════════════════════════════════════════════════════════════
+# TAB 1 - Add Tasks
 with tab_add:
     st.subheader("Add a new study task")
 

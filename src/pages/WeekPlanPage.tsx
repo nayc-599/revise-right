@@ -11,11 +11,10 @@ function formatDayLabel(dateStr: string): string {
   const today = new Date().toISOString().slice(0, 10);
   if (dateStr === today) return 'Today';
   const d = new Date(dateStr + 'T12:00:00');
-  return d.toLocaleDateString('en-GB', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  });
+  const [y, m, dStr] = dateStr.split('-');
+  const numeric = `${dStr}-${m}-${y}`;
+  const weekday = d.toLocaleDateString('en-GB', { weekday: 'short' });
+  return `${weekday} ${numeric}`;
 }
 
 function getWeekDates(): string[] {
@@ -51,6 +50,7 @@ export function WeekPlanPage() {
     new Date().toISOString().slice(0, 10)
   );
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [newTaskError, setNewTaskError] = useState<string | null>(null);
 
   const handleDragStart = (_e: React.DragEvent, taskId: string) => {
     setDraggedId(taskId);
@@ -70,6 +70,16 @@ export function WeekPlanPage() {
 
   const handleAddTask = () => {
     if (!newTitle.trim()) return;
+    const exists = tasks.some(
+      (t) =>
+        t.status !== 'complete' &&
+        t.title.trim().toLowerCase() === newTitle.trim().toLowerCase()
+    );
+    if (exists) {
+      setNewTaskError('Task name must be unique.');
+      return;
+    }
+    setNewTaskError(null);
     const task: Task = {
       id: crypto.randomUUID(),
       userId: LOCAL_USER_ID,
@@ -185,6 +195,9 @@ export function WeekPlanPage() {
               className="w-full px-3 py-2 border-2 border-[var(--color-brown)] rounded bg-[var(--color-warm-white)] font-body"
             />
           </div>
+          {newTaskError && (
+            <div className="text-sm text-[var(--color-casino-red)]">{newTaskError}</div>
+          )}
           <PixelButton
             label="Add task"
             variant="primary"

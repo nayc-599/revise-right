@@ -9,14 +9,16 @@ No Streamlit needed — pure terminal output.
 import time
 import math
 
-# ── Minimal inline versions so the script is fully self-contained ─────────────
+# Minimal inline versions so the script is fully self-contained 
 
 class QuizResult:
     def __init__(self, score): self.QuizScore = score
 
 class Confidence:
-    def __init__(self, level): self.ConfidenceLevel = level
-    def NormalisedScore(self): return (self.ConfidenceLevel - 1) / 4.0
+    def __init__(self, level): 
+        self.ConfidenceLevel = level
+    def NormalisedScore(self): 
+        return (self.ConfidenceLevel - 1) / 4.0
 
 class Task:
     BASE_STABILITY      = 5.0
@@ -48,7 +50,7 @@ class Task:
         return self.RetentionScore < self.RETENTION_THRESHOLD and not self.Mastered
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# helper functions
 
 DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
@@ -62,9 +64,9 @@ def retention_icon(r):
     return "🔴"
 
 def print_section(title):
-    print(f"\n{'─' * 60}")
+    print(f"\n{'-' * 60}")
     print(f"  {title}")
-    print(f"{'─' * 60}")
+    print(f"{'-' * 60}")
 
 def slow_print(text, delay=0.03):
     for char in text:
@@ -73,7 +75,7 @@ def slow_print(text, delay=0.03):
     print()
 
 
-# ── Demo data ─────────────────────────────────────────────────────────────────
+# Demo data
 
 tasks = [
     Task(1, "Math Assignment 1",      2.0, 4, 2, 0.55,  5),
@@ -96,7 +98,7 @@ schedule = {
 }
 
 
-# ── PITCH SCRIPT ──────────────────────────────────────────────────────────────
+# pitch
 
 def main():
     print("\n" + "═" * 60)
@@ -104,7 +106,7 @@ def main():
     print("═" * 60)
     time.sleep(0.5)
 
-    # ── Step 1: Show the tasks ─────────────────────────────────────────
+    # Step 1: Show the tasks 
     print_section("STEP 1 — Your Tasks")
     print(f"  {'ID':<4} {'Task':<26} {'Dur':>4}  {'Diff':>4}  {'Quiz':>5}  {'Conf':>4}  {'Retention':<24} {'Status'}")
     print(f"  {'─'*4} {'─'*26} {'─'*4}  {'─'*4}  {'─'*5}  {'─'*4}  {'─'*24} {'─'*10}")
@@ -120,7 +122,7 @@ def main():
 
     time.sleep(0.8)
 
-    # ── Step 2: Forgetting curve snapshot ─────────────────────────────
+    # Step 2: Forgetting curve snapshot 
     print_section("STEP 2 — Forgetting Curve  R(t) = e^(−t / S)")
     print("  Days without study →  0d   3d   6d   9d   12d  15d")
     print()
@@ -131,8 +133,8 @@ def main():
 
     time.sleep(0.8)
 
-    # ── Step 3: Q-learning thinking ───────────────────────────────────
-    print_section("STEP 3 — Q-Learning Agent Optimising…")
+    # Step 3: Q-learning thinking
+    print_section("STEP 3 - Q-Learning Agent Optimising...")
     steps = [
         "Sampling 60 candidate weekly schedules...",
         "Running 15 Monte Carlo future simulations per schedule...",
@@ -147,8 +149,8 @@ def main():
 
     time.sleep(0.5)
 
-    # ── Step 4: Show the schedule ──────────────────────────────────────
-    print_section("STEP 4 — Recommended 7-Day Study Plan")
+    # Step 4: Show the schedule 
+    print_section("STEP 4 - Recommended 7-Day Study Plan")
 
     task_map = {t.ID: t for t in tasks}
     print()
@@ -170,15 +172,15 @@ def main():
 
     time.sleep(0.8)
 
-    # ── Step 5: Why this schedule ──────────────────────────────────────
+    # Step 5: Why this schedule 
     print_section("STEP 5 — Why This Schedule?")
     reasons = [
-        "Physics (R=24%) and Chemistry (R=36%) are URGENT → scheduled Monday",
-        "Math and Physics revisited mid-week → spaced repetition, not cramming",
-        "English (high confidence, R=90%) → pushed to Saturday, light day",
-        "Sunday kept free → rest is part of the optimisation",
-        "No day exceeds 4 hours → overload penalty avoided",
-        "Same task never appears on consecutive days → cram penalty avoided",
+        "Physics (R=24%) and Chemistry (R=36%) are URGENT -> scheduled Monday",
+        "Math and Physics revisited mid-week -> spaced repetition, not cramming",
+        "English (high confidence, R=90%) -> pushed to Saturday, light day",
+        "Sunday kept free -> rest is part of the optimisation",
+        "No day exceeds 4 hours -> overload penalty avoided",
+        "Same task never appears on consecutive days -> cram penalty avoided",
     ]
     for r in reasons:
         print(f"  ✓  {r}")
@@ -186,7 +188,7 @@ def main():
 
     time.sleep(0.5)
 
-    # ── Step 6: Score ──────────────────────────────────────────────────
+    # Step 6: Score
     print_section("STEP 6 — Schedule Quality Score")
     print()
     slow_print("  Computing reward function...", delay=0.02)

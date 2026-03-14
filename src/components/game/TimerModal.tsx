@@ -3,6 +3,7 @@ import { Modal } from '../shared/Modal';
 import { PixelButton } from '../shared/PixelButton';
 import { CatSprite } from '../shared/CatSprite';
 import { useTimerStore } from '../../store/useTimerStore';
+import { useTaskStore } from '../../store/useTaskStore';
 import { formatSeconds } from '../../utils/timeHelpers';
 
 function useTimerTick() {
@@ -162,8 +163,10 @@ export function TimerModal({
               label="Restart timer"
               variant="ghost"
               onClick={() => {
-                const store = useTimerStore.getState();
-                store.startTimer(activeTaskId!, store.estimatedMinutes);
+                const timerStore = useTimerStore.getState();
+                const task = useTaskStore.getState().getTaskById(activeTaskId!);
+                const originalEstimatedMinutes = task?.estimatedMinutes ?? timerStore.estimatedMinutes;
+                timerStore.startTimer(activeTaskId!, originalEstimatedMinutes);
                 setShowSettings(false);
               }}
             />

@@ -78,6 +78,8 @@ export function HomePage() {
   const cancelTask = useTaskStore((s) => s.cancelTask);
 
   const gameMode = useGameStore((s) => s.gameMode);
+  const setTaskQueue = useGameStore((s) => s.setTaskQueue);
+  const getTodaysTasks = useTaskStore((s) => s.getTodaysTasks);
 
   const isOverdue = (t: Task) =>
     t.status !== 'complete' && t.status !== 'cancelled' && t.dueDate < today;
@@ -144,6 +146,30 @@ export function HomePage() {
   };
 
   const handleAddTask = () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7672/ingest/84d2d211-bc4e-4c62-89b4-b2bc152088ae', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Debug-Session-Id': 'c7493e',
+      },
+      body: JSON.stringify({
+        sessionId: 'c7493e',
+        runId: 'pre-fix',
+        hypothesisId: 'H1',
+        location: 'HomePage.tsx:handleAddTask',
+        message: 'Add task invoked from HomePage',
+        data: {
+          title: newTitle,
+          dueDate: newDueDate,
+          hasUser: !!user,
+          fromWeekPlan: showWeekPlan,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion agent log
+
     if (!newTitle.trim() || !user) return;
     const task: Task = {
       id: crypto.randomUUID(),
@@ -171,6 +197,11 @@ export function HomePage() {
   };
 
   const handleResumeGame = () => {
+    const todaysTasks = getTodaysTasks();
+    const queueIds = todaysTasks
+      .filter((t) => t.status !== 'complete')
+      .map((t) => t.id);
+    setTaskQueue(queueIds);
     if (gameMode === 'wheel') navigate('/game/wheel');
     else navigate('/game/shooting');
   };
@@ -179,30 +210,32 @@ export function HomePage() {
 
   return (
     <div
-      className={`min-h-screen flex font-body ${
+      className={`relative min-h-screen flex font-body ${
         isNightMode
-          ? 'bg-[var(--color-casino-dark)] text-[var(--color-beige)]'
-          : 'bg-[var(--color-cream)] text-[var(--color-dark-brown)]'
+          ? 'text-[var(--color-beige)]'
+          : 'text-[var(--color-dark-brown)]'
       }`}
+      style={{
+        backgroundImage: 'url("/backgrounds/homepage_background.jpg")',
+        backgroundRepeat: 'no-repeat',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center top',
+      }}
     >
-      {/* Left: image placeholder (most of left side) */}
-      <div
-        className={`w-[55%] min-h-screen flex items-center justify-center border-r-4 border-[var(--color-brown)] ${
-          isNightMode ? 'bg-[#1a1209]' : 'bg-[var(--color-beige)]'
-        }`}
-      >
-        <div
-          className={`w-full h-full min-h-[400px] flex items-center justify-center border-2 border-dashed ${
-            isNightMode
-              ? 'border-[var(--color-saloon-wood)] text-[var(--color-saloon-tan)]'
-              : 'border-[var(--color-brown)] text-[var(--color-brown)]'
-          }`}
-        >
-          <span className="font-pixel text-xs opacity-70">
-            [ Image placeholder ]
-          </span>
-        </div>
-      </div>
+      {/* Title sprite positioned roughly 1/3 from left, 2/3 up from bottom */}
+      <img
+        src="/sprites/revise_right_title.png"
+        alt="Revise Right"
+        className="pointer-events-none absolute z-10 w-[260px] max-w-[40vw]"
+        style={{
+          left: '33%',
+          top: '33%',
+          transform: 'translate(-50%, -50%)',
+        }}
+      />
+
+      {/* Left: layout column (keeps previous positioning, no placeholder, no middle divider line) */}
+      <div className="w-[55%] min-h-screen" />
 
       {/* Right: conditional content */}
       <div className="flex-1 flex flex-col min-h-screen p-6 relative">
@@ -225,6 +258,7 @@ export function HomePage() {
             <PixelButton
               label="Sign in"
               variant="primary"
+              className="px-8 py-4 text-sm"
               onClick={signIn}
             />
           </div>
@@ -236,6 +270,7 @@ export function HomePage() {
             <PixelButton
               label="Start day"
               variant="primary"
+              className="px-8 py-4 text-sm"
               onClick={() => {
                 setWeekPlanMode('start');
                 setShowWeekPlan(true);
@@ -253,11 +288,13 @@ export function HomePage() {
               <PixelButton
                 label="Resume game"
                 variant="primary"
+                className="px-8 py-4 text-sm"
                 onClick={handleResumeGame}
               />
               <PixelButton
                 label="Edit this week's tasks"
                 variant="secondary"
+                className="px-8 py-4 text-sm"
                 onClick={() => {
                   setWeekPlanMode('edit');
                   setShowWeekPlan(true);
@@ -266,11 +303,13 @@ export function HomePage() {
               <PixelButton
                 label="Reflect on your day"
                 variant="secondary"
+                className="px-8 py-4 text-sm"
                 onClick={() => navigate('/reflection')}
               />
               <PixelButton
                 label="End day"
                 variant="danger"
+                className="px-8 py-4 text-sm"
                 onClick={() => navigate('/goodnight')}
               />
             </div>
@@ -285,6 +324,7 @@ export function HomePage() {
               <PixelButton
                 label="Edit this week's tasks"
                 variant="primary"
+                className="px-8 py-4 text-sm"
                 onClick={() => {
                   setWeekPlanMode('edit');
                   setShowWeekPlan(true);
@@ -293,11 +333,13 @@ export function HomePage() {
               <PixelButton
                 label="Reflect on your day"
                 variant="secondary"
+                className="px-8 py-4 text-sm"
                 onClick={() => navigate('/reflection')}
               />
               <PixelButton
                 label="End day"
                 variant="danger"
+                className="px-8 py-4 text-sm"
                 onClick={() => navigate('/goodnight')}
               />
             </div>
@@ -421,18 +463,21 @@ export function HomePage() {
               <PixelButton
                 label="Add task"
                 variant="primary"
+                className="px-6 py-3 text-sm"
                 onClick={() => setAddTaskModalOpen(true)}
               />
               {weekPlanMode === 'start' && (
                 <PixelButton
                   label="Confirm"
                   variant="primary"
+                  className="px-6 py-3 text-sm"
                   onClick={handleConfirmStartDay}
                 />
               )}
               <PixelButton
                 label="Close"
                 variant="ghost"
+                className="px-6 py-3 text-sm"
                 onClick={() => setShowWeekPlan(false)}
               />
             </div>
@@ -485,6 +530,7 @@ export function HomePage() {
           <PixelButton
             label="Add task"
             variant="primary"
+            className="px-6 py-3 text-sm"
             onClick={handleAddTask}
             disabled={!newTitle.trim()}
           />

@@ -27,3 +27,54 @@ export function exportDayReport(report: DayReport, tasks: Task[]): void {
   doc.text('Keep up the great work!', 20, y);
   doc.save(`revise-right-${report.date}.pdf`);
 }
+
+export interface ReflectionSection {
+  heading: string;
+  prompt: string;
+  response: string;
+}
+
+/**
+ * Export reflection journal as an aesthetic PDF.
+ */
+export function exportReflectionJournal(date: string, sections: ReflectionSection[]): void {
+  const doc = new jsPDF();
+  doc.setFillColor(255, 248, 240);
+  doc.rect(10, 10, 190, 277, 'F');
+
+  doc.setFontSize(20);
+  doc.text('Revise Right — Reflection Journal', 20, 30);
+  doc.setFontSize(12);
+  doc.text(`Date: ${date}`, 20, 40);
+
+  let y = 60;
+
+  for (const section of sections) {
+    if (y > 260) {
+      doc.addPage();
+      doc.setFillColor(255, 248, 240);
+      doc.rect(10, 10, 190, 277, 'F');
+      y = 40;
+    }
+
+    doc.setFontSize(14);
+    doc.text(section.heading, 20, y);
+    y += 8;
+
+    doc.setFontSize(11);
+    const promptLines = doc.splitTextToSize(section.prompt, 170);
+    doc.text(promptLines, 20, y);
+    y += promptLines.length * 6 + 4;
+
+    const responseText = section.response.trim() || '[No response provided]';
+    const responseLines = doc.splitTextToSize(responseText, 170);
+
+    doc.setDrawColor(200, 160, 120);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(18, y - 2, 174, responseLines.length * 6 + 8, 2, 2);
+    doc.text(responseLines, 20, y + 4);
+    y += responseLines.length * 6 + 14;
+  }
+
+  doc.save(`revise-right-reflection-${date}.pdf`);
+}

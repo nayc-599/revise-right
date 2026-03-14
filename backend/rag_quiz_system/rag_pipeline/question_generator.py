@@ -63,9 +63,37 @@ class QuestionGenerator:
         )
 
         raw = response.choices[0].message.content.strip()
-        
+        # Log raw LLM output for debugging
+        print("[quiz] Raw LLM response:", raw, flush=True)
+
+        # Attempt 1: extract JSON array between first '[' and last ']'
+        cleaned = raw
+        start = raw.find('[')
+        end = raw.rfind(']')
+        if start != -1 and end != -1 and end > start:
+            candidate = raw[start : end + 1]
+            try:
+                questions: list[dict] = json.loads(candidate)
+                return questions
+            except json.JSONDecodeError:
+                pass
+
+        # Attempt 2: strip markdown code fences like ```json ... ``` or ``` ... ```
+        fenced = raw.strip()
+        if fenced.startswith("```"):
+            # remove leading ``` or ```json
+            fenced = fenced.split("\n", 1)[-1]
+        if fenced.endswith("```"):
+            fenced = fenced.rsplit("```", 1)[0].strip()
         try:
-            questions: list[dict] = json.loads(raw)
+            questions = json.loads(fenced)
+            return questions
+        except json.JSONDecodeError:
+            pass
+
+        # Attempt 3: fall back to original raw string
+        try:
+            questions = json.loads(raw)
         except json.JSONDecodeError as exc:
             raise ValueError(
                 f"LLM returned non-JSON: {exc}\n\nRaw:\n{raw}"

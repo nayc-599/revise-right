@@ -103,10 +103,10 @@ def run_quiz_pipeline(pdf_bytes: bytes) -> list[dict]:
     print("[quiz] Calling QuestionGenerator via LLM (Ollama)...", flush=True)
     generator = QuestionGenerator()
     raw_questions = generator.generate_with_retry(results, n_questions=5, retries=3)
-    print(f\"[quiz] LLM returned {len(raw_questions)} raw questions.\", flush=True)
+    print(f"[quiz] LLM returned {len(raw_questions)} raw questions.", flush=True)
 
     out = []
     for q in raw_questions[:5]:
         out.append(_normalize_question(q))
-    print(f\"[quiz] Normalised questions count: {len(out)}. Returning to API.\", flush=True)
+    print(f"[quiz] Normalised questions count: {len(out)}. Returning to API.", flush=True)
     return out

@@ -4,11 +4,11 @@ import altair as alt
 from datetime import datetime, timedelta
 import math
 
-import State
-from task import Task
-from confidence import Confidence
-from quizResult import QuizResult
-import QTableSimulator as QTS
+from . import State
+from .task import Task
+from .confidence import Confidence
+from .quizResult import QuizResult
+from . import QTableSimulator as QTS
 
 st.set_page_config(page_title="AI Study Planner", layout="wide")
 

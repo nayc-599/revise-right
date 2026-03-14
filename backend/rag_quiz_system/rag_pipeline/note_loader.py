@@ -2,7 +2,7 @@ import sqlite3
 
 class NoteLoader:
     def __init__(self, df_path: str):
-        self.conn = sqlite3.Connection(df_path)
+        self.conn = sqlite3.connect(df_path)
     
     def fetch_notes(self, course):
         cur = self.conn.cursor()

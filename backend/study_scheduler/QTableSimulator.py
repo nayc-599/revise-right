@@ -1,8 +1,8 @@
 import random
 import copy
-import Simulator
-import State
-import QTable
+from . import Simulator
+from . import State
+from . import QTable
 
 class QTableSimulator(Simulator.Simulator):
     """
@@ -90,10 +90,10 @@ class QTableSimulator(Simulator.Simulator):
 # ── Quick standalone test ────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    import State as S
-    import Task as T
-    import Confidence as C
-    import QuizResult as QR
+    from . import State as S
+    from . import Task as T
+    from . import Confidence as C
+    from . import QuizResult as QR
 
     state = S.State(Seed=42)
 

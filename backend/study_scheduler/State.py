@@ -1,10 +1,10 @@
 import copy
 import random
 import math
-import IDGenerator
-import Task
-import Confidence
-import QuizResult
+from . import IDGenerator
+from . import Task
+from . import Confidence
+from . import QuizResult
 
 class State:
     """

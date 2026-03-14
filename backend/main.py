@@ -20,14 +20,12 @@ sys.path.insert(0, str(BACKEND_DIR))
 
 from rag_quiz_system.pipeline import run_quiz_pipeline
 
-# Scheduler: modules use bare "import Task", "import Confidence" so we need study_scheduler on path
-SCHEDULER_DIR = BACKEND_DIR / "study_scheduler"
-sys.path.insert(0, str(SCHEDULER_DIR))
-from State import State
-from task import Task as SchedulerTask
-from confidence import Confidence
-from quizResult import QuizResult
-from QTableSimulator import QTableSimulator
+# Scheduler: import from study_scheduler package
+from study_scheduler.State import State
+from study_scheduler.task import Task as SchedulerTask
+from study_scheduler.confidence import Confidence
+from study_scheduler.quizResult import QuizResult
+from study_scheduler.QTableSimulator import QTableSimulator
 
 app = FastAPI(title="Revise Right API")
 

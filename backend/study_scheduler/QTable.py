@@ -1,4 +1,4 @@
-import HashableAction
+from . import HashableAction
 
 class QTable:
     """

@@ -1,8 +1,10 @@
 import sqlite3
 import json
+import os
 from typing import List, Dict
 
-DB_PATH = "/Users/naychi/Desktop/revise-write/rag_quiz_system/rag_pipeline/notes.db"
+_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(_THIS_DIR, "notes.db")
 
 def init_quiz_table():
     conn = sqlite3.connect(DB_PATH)

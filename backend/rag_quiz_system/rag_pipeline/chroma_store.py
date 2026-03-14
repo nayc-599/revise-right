@@ -5,7 +5,7 @@ class ChromaStore:
         self.client = chromadb.PersistentClient(path=path)
         self.collection = self.client.get_or_create_collection(
             name="notes_rag",
-            metadata={"hgef:space": "cosine"}
+            metadata={"hnsw:space": "cosine"}
         )
 
     def delete_by_course(self, course):

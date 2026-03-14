@@ -2,7 +2,7 @@
  * Central API client. Base URL from env; all backend calls go through here.
  */
 
-const BASE = (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL ?? '';
+const BASE = (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL ?? 'http://localhost:8000';
 
 export type QuizQuestion = {
   question: string;

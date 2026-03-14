@@ -1,7 +1,7 @@
 import math
 import copy
-import Confidence
-import QuizResult
+from . import Confidence
+from . import QuizResult
 
 class Task:
     """

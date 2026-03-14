@@ -14,9 +14,15 @@ export function GoodnightPage() {
   const tasks = useTaskStore((s) => s.tasks);
   const gameMode = useGameStore((s) => s.gameMode);
   const today = new Date().toISOString().slice(0, 10);
-  const completedToday = tasks.filter(
-    (t) => t.dueDate === today && t.status === 'complete'
-  );
+  const completedToday = tasks.filter((t) => {
+    if (t.status !== 'complete') return false;
+    // Prefer explicit completion timestamp when available
+    if (t.completedAt) {
+      return t.completedAt.slice(0, 10) === today;
+    }
+    // Fallback for older data: use dueDate for same-day tasks only
+    return t.dueDate === today;
+  });
   const [saved, setSaved] = useState(false);
 
   const report: DayReport = {

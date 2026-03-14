@@ -15,6 +15,10 @@ interface TaskStore {
 }
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
+const isPastDueIncomplete = (task: Task, today: string) =>
+  task.status !== 'complete' &&
+  task.status !== 'cancelled' &&
+  task.dueDate < today;
 
 function getWeekDates(): string[] {
   const dates: string[] = [];
@@ -50,33 +54,52 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   markComplete: (id) =>
     set((state) => ({
       tasks: state.tasks.map((t) =>
-        t.id === id ? { ...t, status: 'complete' as TaskStatus } : t
+        t.id === id
+          ? { ...t, status: 'complete' as TaskStatus, completedAt: new Date().toISOString() }
+          : t
       ),
     })),
 
   moveTaskToDate: (id, newDueDate) =>
-    set((state) => ({
-      tasks: state.tasks.map((t) =>
-        t.id === id ? { ...t, dueDate: newDueDate } : t
-      ),
-    })),
+    set((state) => {
+      const today = todayISO();
+      return {
+        tasks: state.tasks.map((t) => {
+          if (t.id !== id) return t;
+          // Overdue incomplete tasks are locked in the schedule UI.
+          if (isPastDueIncomplete(t, today)) return t;
+          return { ...t, dueDate: newDueDate };
+        }),
+      };
+    }),
 
   getTodaysTasks: () => {
     const today = todayISO();
-    return get().tasks.filter(
-      (t) => t.dueDate === today && t.status !== 'cancelled'
-    );
+    return get()
+      .tasks.filter((t) => t.status !== 'cancelled')
+      .filter((t) => (isPastDueIncomplete(t, today) ? today : t.dueDate) === today);
   },
 
   getTaskById: (id) => get().tasks.find((t) => t.id === id),
 
-  getTasksForDate: (date) =>
-    get().tasks.filter(
-      (t) => t.dueDate === date && t.status !== 'cancelled'
-    ),
+  getTasksForDate: (date) => {
+    const today = todayISO();
+    const tasks = get().tasks.filter((t) => t.status !== 'cancelled');
+    if (date === today) {
+      return tasks.filter(
+        (t) => (isPastDueIncomplete(t, today) ? today : t.dueDate) === today
+      );
+    }
+    return tasks.filter((t) => t.dueDate === date);
+  },
 
   getTasksForWeek: () => {
-    const tasks = get().tasks.filter((t) => t.status !== 'cancelled');
+    const today = todayISO();
+    const tasks = get()
+      .tasks.filter((t) => t.status !== 'cancelled' && t.status !== 'complete')
+      .map((t) =>
+        isPastDueIncomplete(t, today) ? { ...t, dueDate: today } : t
+      );
     return getWeekDates().map((date) => {
       const dayTasks = tasks.filter((t) => t.dueDate === date);
       const totalMinutes = dayTasks.reduce((s, t) => s + t.estimatedMinutes, 0);

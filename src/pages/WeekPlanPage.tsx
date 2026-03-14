@@ -11,11 +11,10 @@ function formatDayLabel(dateStr: string): string {
   const today = new Date().toISOString().slice(0, 10);
   if (dateStr === today) return 'Today';
   const d = new Date(dateStr + 'T12:00:00');
-  return d.toLocaleDateString('en-GB', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  });
+  const [y, m, dStr] = dateStr.split('-');
+  const numeric = `${dStr}-${m}-${y}`;
+  const weekday = d.toLocaleDateString('en-GB', { weekday: 'short' });
+  return `${weekday} ${numeric}`;
 }
 
 function getWeekDates(): string[] {

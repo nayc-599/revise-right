@@ -14,7 +14,10 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
   useEffect(() => {
     if (!isOpen) return;
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key !== 'Escape') return;
+      const el = document.activeElement;
+      if (el instanceof HTMLInputElement && (el.type === 'date' || el.type === 'time')) return;
+      onClose();
     };
     document.addEventListener('keydown', handleKey);
     document.body.style.overflow = 'hidden';
@@ -26,10 +29,17 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
 
   if (!isOpen) return null;
 
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target !== e.currentTarget) return;
+    const el = document.activeElement;
+    if (el instanceof HTMLInputElement && (el.type === 'date' || el.type === 'time')) return;
+    onClose();
+  };
+
   const content = (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-      onClick={onClose}
+      onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"

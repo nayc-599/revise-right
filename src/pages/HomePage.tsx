@@ -1,32 +1,23 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTaskStore } from '../store/useTaskStore';
 import { useDayStore } from '../store/useDayStore';
 import { useUserStore } from '../store/useUserStore';
 import { useGameStore } from '../store/useGameStore';
-import { useTestStore } from '../store/useTestStore';
 import { LOCAL_USER_ID } from '../store/useUserStore';
-import { useQuizStore } from '../store/useQuizStore';
 import type { Task } from '../types';
 import { PixelButton } from '../components/shared/PixelButton';
 import { Modal } from '../components/shared/Modal';
 import { TaskCard } from '../components/tasks/TaskCard';
-import {
-  quizGenerate,
-  schedulerGenerate,
-  schedulerGetSchedule,
-  schedulerSaveSchedule,
-} from '../api';
 
 function formatDayLabel(dateStr: string): string {
   const today = new Date().toISOString().slice(0, 10);
   if (dateStr === today) return 'Today';
   const d = new Date(dateStr + 'T12:00:00');
-  return d.toLocaleDateString('en-GB', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  });
+  const [y, m, dStr] = dateStr.split('-');
+  const numeric = `${dStr}-${m}-${y}`;
+  const weekday = d.toLocaleDateString('en-GB', { weekday: 'short' });
+  return `${weekday} ${numeric}`;
 }
 
 function getWeekDates(): string[] {
@@ -84,20 +75,25 @@ export function HomePage() {
   const tasks = useTaskStore((s) => s.tasks);
   const moveTaskToDate = useTaskStore((s) => s.moveTaskToDate);
   const addTask = useTaskStore((s) => s.addTask);
-  const editTask = useTaskStore((s) => s.editTask);
   const cancelTask = useTaskStore((s) => s.cancelTask);
-  const markComplete = useTaskStore((s) => s.markComplete);
 
   const gameMode = useGameStore((s) => s.gameMode);
 
+  const isOverdue = (t: Task) =>
+    t.status !== 'complete' && t.status !== 'cancelled' && t.dueDate < today;
+
   const weekData = useMemo(() => {
-    const activeTasks = tasks.filter((t) => t.status !== 'cancelled');
+    const activeTasks = tasks.filter(
+      (t) => t.status !== 'cancelled' && t.status !== 'complete'
+    );
     return getWeekDates().map((date) => {
-      const dayTasks = activeTasks.filter((t) => t.dueDate === date);
+      const dayTasks = activeTasks.filter(
+        (t) => (isOverdue(t) ? today : t.dueDate) === date
+      );
       const totalMinutes = dayTasks.reduce((s, t) => s + t.estimatedMinutes, 0);
       return { date, tasks: dayTasks, totalMinutes };
     });
-  }, [tasks]);
+  }, [tasks, today]);
 
   const todayTasks = useMemo(
     () =>
@@ -115,101 +111,23 @@ export function HomePage() {
 
   const completedTodayForSummary = useMemo(
     () =>
-      tasks.filter(
-        (t) => t.dueDate === today && t.status === 'complete'
-      ),
+      tasks.filter((t) => {
+        if (t.status !== 'complete') return false;
+        if (t.completedAt) return t.completedAt.slice(0, 10) === today;
+        return t.dueDate === today;
+      }),
     [tasks, today]
   );
 
-  const [addManageOpen, setAddManageOpen] = useState(false);
   const [addTaskModalOpen, setAddTaskModalOpen] = useState(false);
-  const [manageTab, setManageTab] = useState<'tasks' | 'tests'>('tasks');
   const [newTitle, setNewTitle] = useState('');
   const [newMinutes, setNewMinutes] = useState(30);
   const [newDueDate, setNewDueDate] = useState(() => todayISO());
   const [draggedId, setDraggedId] = useState<string | null>(null);
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-
-  const pdfInputRef = useRef<HTMLInputElement>(null);
-  const [quizLoading, setQuizLoading] = useState(false);
-  const [quizError, setQuizError] = useState<string | null>(null);
-  const [schedule, setSchedule] = useState<Record<string, number[]>>({});
-  const [scheduleTasks, setScheduleTasks] = useState<{ id: number; name: string; duration_hours: number }[]>([]);
-  const [scheduleLoading, setScheduleLoading] = useState(false);
-  const [scheduleError, setScheduleError] = useState<string | null>(null);
-  const setQuiz = useQuizStore((s) => s.setQuiz);
-  const tests = useTestStore((s) => s.tests);
-
-  useEffect(() => {
-    if (manageTab !== 'tests') return;
-    let cancelled = false;
-    schedulerGetSchedule(LOCAL_USER_ID).then((res) => {
-      if (!cancelled) {
-        setSchedule(res.schedule ?? {});
-        setScheduleTasks(res.tasks ?? []);
-      }
-    }).catch(() => {});
-    return () => { cancelled = true; };
-  }, [manageTab]);
-
-  const handlePdfSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file?.name.toLowerCase().endsWith('.pdf')) {
-      setQuizError('Please select a PDF file.');
-      return;
-    }
-    setQuizError(null);
-    setQuizLoading(true);
-    try {
-      const questions = await quizGenerate(file);
-      const topic = file.name.replace(/\.pdf$/i, '').trim() || 'Quiz';
-      setQuiz(questions, topic);
-      setAddManageOpen(false);
-      navigate('/quiz');
-    } catch (err) {
-      setQuizError(err instanceof Error ? err.message : 'Failed to generate quiz');
-    } finally {
-      setQuizLoading(false);
-    }
-  };
-
-  const handleGenerateSchedule = async () => {
-    const topics: { name: string; difficulty: number; confidence: number; quiz_score: number; days_since_last_study: number; duration_hours: number }[] = [];
-    tests.forEach((test) => {
-      (test.topics ?? []).forEach((topic) => {
-        const lastAttempt = topic.quizHistory?.length ? topic.quizHistory[topic.quizHistory.length - 1] : null;
-        const quizScore = lastAttempt ? lastAttempt.score / 100 : 0.5;
-        const confMap = { low: 1, medium: 3, high: 5 } as const;
-        topics.push({
-          name: `${test.name} – ${topic.name}`,
-          difficulty: 3,
-          confidence: confMap[topic.confidence] ?? 3,
-          quiz_score: quizScore,
-          days_since_last_study: 7,
-          duration_hours: 1,
-        });
-      });
-    });
-    if (topics.length === 0) {
-      setScheduleError('Add tests and topics first.');
-      return;
-    }
-    setScheduleError(null);
-    setScheduleLoading(true);
-    try {
-      const res = await schedulerGenerate({ topics });
-      setSchedule(res.schedule);
-      setScheduleTasks(res.tasks);
-      await schedulerSaveSchedule(LOCAL_USER_ID, { schedule: res.schedule, tasks: res.tasks });
-    } catch (err) {
-      setScheduleError(err instanceof Error ? err.message : 'Failed to generate schedule');
-    } finally {
-      setScheduleLoading(false);
-    }
-  };
 
   const handleDragStart = (_e: React.DragEvent, taskId: string) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (task && isOverdue(task)) return;
     setDraggedId(taskId);
   };
 
@@ -257,21 +175,6 @@ export function HomePage() {
     else navigate('/game/shooting');
   };
 
-  const allTasksSorted = useMemo(
-    () =>
-      [...tasks]
-        .filter((t) => t.status !== 'cancelled')
-        .sort(
-          (a, b) =>
-            a.dueDate.localeCompare(b.dueDate) ||
-            a.createdAt.localeCompare(b.createdAt)
-        ),
-    [tasks]
-  );
-
-  const editingTask =
-    editingTaskId ? tasks.find((t) => t.id === editingTaskId) : null;
-
   const isNightMode = user && endedDate === today;
 
   return (
@@ -309,8 +212,7 @@ export function HomePage() {
             <HangingSign
               label="Add / Manage Tasks"
               onClick={() => {
-                setAddManageOpen(true);
-                setManageTab('tasks');
+                navigate('/tasks');
               }}
             />
             <HangingSign label="Sign out" onClick={signOut} />
@@ -494,13 +396,19 @@ export function HomePage() {
                   </div>
                   <div className="space-y-1">
                     {dayTasks.map((task) => (
-                      <TaskCard
-                        key={task.id}
-                        task={task}
-                        variant="list"
-                        draggable
-                        onDragStart={handleDragStart}
-                      />
+                      <div key={task.id} className="space-y-1">
+                        {isOverdue(task) && (
+                          <div className="text-[10px] font-pixel text-[var(--color-casino-red)]">
+                            past due
+                          </div>
+                        )}
+                        <TaskCard
+                          task={task}
+                          variant="list"
+                          draggable={!isOverdue(task)}
+                          onDragStart={handleDragStart}
+                        />
+                      </div>
                     ))}
                   </div>
                   <div className="mt-1 pt-1 border-t border-[var(--color-brown)] text-xs text-[var(--color-brown)]">
@@ -580,227 +488,6 @@ export function HomePage() {
             onClick={handleAddTask}
             disabled={!newTitle.trim()}
           />
-        </div>
-      </Modal>
-
-      {/* Add/Manage Tasks modal */}
-      <Modal
-        isOpen={addManageOpen}
-        onClose={() => {
-          setAddManageOpen(false);
-          setEditingTaskId(null);
-        }}
-        title="Add / Manage Tasks"
-      >
-        <div className="space-y-4">
-          <div className="flex gap-2 border-b-2 border-[var(--color-brown)] pb-2">
-            <button
-              type="button"
-              onClick={() => setManageTab('tasks')}
-              className={`font-pixel text-[10px] px-3 py-1 rounded ${
-                manageTab === 'tasks'
-                  ? 'bg-[var(--color-gold)] text-[var(--color-dark-brown)]'
-                  : 'bg-[var(--color-cream)] text-[var(--color-brown)]'
-              }`}
-            >
-              Tasks
-            </button>
-            <button
-              type="button"
-              onClick={() => setManageTab('tests')}
-              className={`font-pixel text-[10px] px-3 py-1 rounded ${
-                manageTab === 'tests'
-                  ? 'bg-[var(--color-gold)] text-[var(--color-dark-brown)]'
-                  : 'bg-[var(--color-cream)] text-[var(--color-brown)]'
-              }`}
-            >
-              Tests
-            </button>
-          </div>
-
-          {manageTab === 'tasks' && (
-            <>
-              <PixelButton
-                label="+ Add Task"
-                variant="primary"
-                onClick={() => {
-                  setNewTitle('');
-                  setNewMinutes(30);
-                  setNewDueDate(todayISO());
-                  setAddTaskModalOpen(true);
-                }}
-              />
-              <ul className="space-y-2 max-h-64 overflow-auto">
-                {allTasksSorted.map((task) => (
-                  <li
-                    key={task.id}
-                    className={`flex items-center justify-between gap-2 p-2 rounded border-2 ${
-                      task.isAutoGenerated
-                        ? 'bg-[var(--color-sky)]/30 border-[var(--color-lavender)]'
-                        : 'bg-[var(--color-cream)] border-[var(--color-brown)]'
-                    }`}
-                  >
-                    <span className="italic truncate flex-1">{task.title}</span>
-                    <span className="text-xs text-[var(--color-brown)]">
-                      {task.dueDate} · {task.estimatedMinutes} min
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setEditingTaskId(task.id)}
-                      className="shrink-0 p-1 rounded hover:bg-[var(--color-beige)]"
-                      aria-label="Edit task"
-                    >
-                      <img
-                        src="/sprites/icon-edit.svg"
-                        alt=""
-                        width="20"
-                        height="20"
-                      />
-                    </button>
-                  </li>
-                ))}
-                {allTasksSorted.length === 0 && (
-                  <li className="text-[var(--color-brown)] text-sm">
-                    No tasks yet. Add one above.
-                  </li>
-                )}
-              </ul>
-            </>
-          )}
-
-          {manageTab === 'tests' && (
-            <div className="space-y-4">
-              <input
-                ref={pdfInputRef}
-                type="file"
-                accept=".pdf,application/pdf"
-                className="hidden"
-                onChange={handlePdfSelect}
-                aria-label="Select PDF"
-              />
-              <PixelButton
-                label="Add Test (upload PDF)"
-                variant="primary"
-                onClick={() => pdfInputRef.current?.click()}
-                disabled={quizLoading}
-              />
-              {quizLoading && (
-                <p className="text-[var(--color-brown)] text-sm">Generating quiz…</p>
-              )}
-              {quizError && (
-                <p className="text-[var(--color-casino-red)] text-sm">{quizError}</p>
-              )}
-              <hr className="border-[var(--color-brown)]" />
-              <PixelButton
-                label="Generate Schedule"
-                variant="secondary"
-                onClick={handleGenerateSchedule}
-                disabled={scheduleLoading}
-              />
-              {scheduleLoading && (
-                <p className="text-[var(--color-brown)] text-sm">Generating schedule…</p>
-              )}
-              {scheduleError && (
-                <p className="text-[var(--color-casino-red)] text-sm">{scheduleError}</p>
-              )}
-              {scheduleTasks.length > 0 && (
-                <div className="mt-4">
-                  <p className="font-pixel text-[10px] text-[var(--color-dark-brown)] mb-2">
-                    Weekly schedule
-                  </p>
-                  <div className="rounded border-2 border-[var(--color-brown)] overflow-hidden">
-                    {['1', '2', '3', '4', '5', '6', '7'].map((day) => (
-                      <div
-                        key={day}
-                        className="flex items-center gap-2 p-2 border-b border-[var(--color-brown)] last:border-b-0 bg-[var(--color-cream)]"
-                      >
-                        <span className="font-pixel text-[8px] w-8">Day {day}</span>
-                        <span className="font-body text-sm">
-                          {(schedule[day] ?? [])
-                            .map((id) => scheduleTasks.find((t) => t.id === id)?.name ?? id)
-                            .join(', ') || '—'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {editingTask && (
-            <Modal
-              isOpen={!!editingTaskId}
-              onClose={() => setEditingTaskId(null)}
-              title="Edit task"
-            >
-              <div className="space-y-4">
-                <div>
-                  <label className="block font-body text-sm mb-1">Title</label>
-                  <input
-                    type="text"
-                    value={editingTask.title}
-                    onChange={(e) =>
-                      editTask(editingTask.id, { title: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border-2 border-[var(--color-brown)] rounded font-body"
-                  />
-                </div>
-                <div>
-                  <label className="block font-body text-sm mb-1">
-                    Due date
-                  </label>
-                  <input
-                    type="date"
-                    value={editingTask.dueDate}
-                    onChange={(e) =>
-                      editTask(editingTask.id, { dueDate: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border-2 border-[var(--color-brown)] rounded font-body"
-                  />
-                </div>
-                <div>
-                  <label className="block font-body text-sm mb-1">
-                    Estimated minutes
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={editingTask.estimatedMinutes}
-                    onChange={(e) =>
-                      editTask(editingTask.id, {
-                        estimatedMinutes: Number(e.target.value) || 30,
-                      })
-                    }
-                    className="w-full px-3 py-2 border-2 border-[var(--color-brown)] rounded font-body"
-                  />
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <PixelButton
-                    label="Mark complete"
-                    variant="primary"
-                    onClick={() => {
-                      markComplete(editingTask.id);
-                      setEditingTaskId(null);
-                    }}
-                  />
-                  <PixelButton
-                    label="Cancel task"
-                    variant="danger"
-                    onClick={() => {
-                      cancelTask(editingTask.id);
-                      setEditingTaskId(null);
-                    }}
-                  />
-                  <PixelButton
-                    label="Close"
-                    variant="ghost"
-                    onClick={() => setEditingTaskId(null)}
-                  />
-                </div>
-              </div>
-            </Modal>
-          )}
         </div>
       </Modal>
     </div>

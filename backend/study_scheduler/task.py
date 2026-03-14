@@ -93,7 +93,7 @@ class Task:
         self.RetentionScore = 1.0  # reset to full after studying
 
     # ------------------------------------------------------------------
-    # A task is "mastered" when quiz score ≥ 0.85 AND confidence ≥ 4
+    # A task is "mastered" when quiz score >= 0.85 AND confidence >= 4
     # ------------------------------------------------------------------
     def CheckMastered(self):
         quiz_ok  = self.QuizResult  is not None and self.QuizResult.QuizScore  >= 0.85

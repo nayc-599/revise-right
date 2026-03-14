@@ -12,17 +12,20 @@ import QTableSimulator as QTS
 
 st.set_page_config(page_title="AI Study Planner", layout="wide")
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
+# Helper functions
 
 DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 def ensure_state():
     if "tasks" not in st.session_state:
         st.session_state.tasks = []       # list of Task objects
+        
     if "id_counter" not in st.session_state:
         st.session_state.id_counter = 0
+        
     if "schedule" not in st.session_state:
         st.session_state.schedule = None  # dict {1-7: [task_ids]}
+        
     if "schedule_score" not in st.session_state:
         st.session_state.schedule_score = None
 

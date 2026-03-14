@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 32" width="64" height="32">
+  <!-- Pixel art bed - 4px blocks -->
+  <rect fill="#8b5e3c" x="0" y="8" width="64" height="8"/>
+  <rect fill="#c8a96e" x="4" y="12" width="56" height="12"/>
+  <rect fill="#6b4226" x="4" y="24" width="56" height="4"/>
+  <rect fill="#fdebd0" x="8" y="16" width="48" height="6"/>
+  <rect fill="#3b1f0e" x="0" y="28" width="64" height="4"/>
+</svg>

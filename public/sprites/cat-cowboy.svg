@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Pixel art cowboy cat - 4px blocks, hat -->
+  <rect fill="#8b5e3c" x="4" y="0" width="24" height="8"/>
+  <rect fill="#6b4226" x="8" y="8" width="4" height="4"/>
+  <rect fill="#6b4226" x="20" y="8" width="4" height="4"/>
+  <rect fill="#fdebd0" x="12" y="12" width="8" height="4"/>
+  <rect fill="#3b1f0e" x="12" y="16" width="4" height="4"/>
+  <rect fill="#3b1f0e" x="16" y="16" width="4" height="4"/>
+  <rect fill="#fdebd0" x="4" y="20" width="24" height="8"/>
+  <rect fill="#6b4226" x="4" y="28" width="4" height="4"/>
+  <rect fill="#6b4226" x="12" y="28" width="8" height="4"/>
+  <rect fill="#6b4226" x="24" y="28" width="4" height="4"/>
+  <rect fill="#c8a96e" x="8" y="24" width="4" height="4"/>
+  <rect fill="#c8a96e" x="20" y="24" width="4" height="4"/>
+</svg>

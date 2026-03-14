@@ -1,0 +1,36 @@
+# Revise Right — Cursor Rules
+
+## Language & Tooling
+- All code must be TypeScript. No .js files in /src.
+- Use React functional components with hooks only. No class components.
+- Use Zustand for all shared/global state. No Redux, no Context for data state.
+- Use Tailwind CSS for layout and spacing. Use custom CSS modules for pixel-art aesthetics, animations, and decorative styling.
+- Never use inline styles except for dynamic runtime values (e.g. wheel rotation angle).
+
+## Code Quality
+- Write JSDoc comments for all custom hooks and utility functions.
+- Always handle loading, error, and empty states in async components.
+- Never hardcode user IDs, API keys, or secrets. Always use import.meta.env.
+- Type all props with TypeScript interfaces. Never use `any`.
+- Import shared types from /src/types/index.ts — never redefine types inline.
+
+## File Conventions
+- One component per file. Filename = component name (PascalCase).
+- Hooks in /src/hooks/. Utilities in /src/utils/. Stores in /src/store/.
+- Co-locate component-specific CSS in a .module.css file next to the component.
+
+## Firebase & API
+- All Firestore reads/writes must be scoped to the authenticated userId.
+- The Anthropic API key must never appear in client-side code. Use serverless functions only.
+- Wrap all Firestore calls in try/catch and surface errors to the UI.
+
+## Accessibility
+- All icon-only buttons must have aria-label.
+- All modals must trap focus when open.
+- Use aria-live regions for timer countdowns and real-time updates.
+
+## Pixel Art Aesthetic
+- Use 'Press Start 2P' for headings and game UI text.
+- Use 'Nunito' for body text, labels, and form inputs.
+- Use the CSS variables defined in src/index.css for all colors — never hardcode hex values.
+- Cat sprite animations must use CSS keyframes on spritesheet background-position.

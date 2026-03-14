@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Pixel art cat sleeping - 4px blocks -->
+  <rect fill="#6b4226" x="12" y="8" width="8" height="4"/>
+  <rect fill="#fdebd0" x="8" y="12" width="16" height="8"/>
+  <rect fill="#3b1f0e" x="10" y="16" width="4" height="4"/>
+  <rect fill="#3b1f0e" x="18" y="16" width="4" height="4"/>
+  <rect fill="#fdebd0" x="4" y="20" width="24" height="8"/>
+  <rect fill="#6b4226" x="8" y="28" width="4" height="4"/>
+  <rect fill="#6b4226" x="20" y="28" width="4" height="4"/>
+  <rect fill="#e8a598" x="12" y="24" width="8" height="4"/>
+</svg>

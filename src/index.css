@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-cream: #fef9e7;
+  --color-beige: #fdebd0;
+  --color-sky: #d6eaf8;
+  --color-gold: #f0b429;
+  --color-brown: #6b4226;
+  --color-dark-brown: #3b1f0e;
+  --color-lavender: #c3a8d1;
+  --color-dusty-rose: #e8a598;
+  --color-warm-white: #fffdf5;
+  --color-pixel-shadow: #2c1810;
+
+  /* Game-specific */
+  --color-saloon-tan: #c8a96e;
+  --color-saloon-wood: #8b5e3c;
+  --color-casino-dark: #2d1b0e;
+  --color-casino-red: #c0392b;
+}
+
+body {
+  margin: 0;
+  font-family: 'Nunito', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Focus visible for accessibility */
+:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}

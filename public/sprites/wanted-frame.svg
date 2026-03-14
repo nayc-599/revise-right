@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 96" width="64" height="96">
+  <!-- WANTED poster frame - pixel style -->
+  <rect fill="#fdebd0" x="4" y="4" width="56" height="88" stroke="#6b4226" stroke-width="4"/>
+  <rect fill="#3b1f0e" x="8" y="8" width="48" height="12"/>
+  <text x="32" y="18" font-family="'Press Start 2P', monospace" font-size="8" fill="#f0b429" text-anchor="middle">WANTED</text>
+  <rect fill="#fef9e7" x="12" y="24" width="40" height="56"/>
+  <rect fill="#6b4226" x="8" y="84" width="48" height="4"/>
+</svg>

@@ -5,9 +5,9 @@ from datetime import datetime, timedelta
 import math
 
 import State
-from task import Task
-from confidence import Confidence
-from quizResult import QuizResult
+from Task import Task
+from Confidence import Confidence
+from QuizResult import QuizResult
 import QTableSimulator as QTS
 
 st.set_page_config(page_title="AI Study Planner", layout="wide")
@@ -49,7 +49,7 @@ def forgetting_curve_points(task: "Task.Task", days: int = 14):
         rows.append({"Day": d, "Retention": round(r, 4), "Task": task.TaskName})
     return rows
 
-# ── App layout ───────────────────────────────────────────────────────────────
+# App layout 
 
 ensure_state()
 st.title("🎓 AI Study Planner")
@@ -59,9 +59,7 @@ tab_add, tab_tasks, tab_plan, tab_curve = st.tabs(
     ["➕ Add Tasks", "📋 My Tasks", "📅 Generate Plan", "📉 Forgetting Curves"]
 )
 
-# ════════════════════════════════════════════════════════════════════════════
-# TAB 1 — Add Tasks
-# ════════════════════════════════════════════════════════════════════════════
+# TAB 1 - Add Tasks
 with tab_add:
     st.subheader("Add a new study task")
 

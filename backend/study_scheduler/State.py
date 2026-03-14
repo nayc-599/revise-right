@@ -7,16 +7,8 @@ import Confidence
 import QuizResult
 
 class State:
-    """
-    Represents the full study planner state at a given simulated week.
 
-    Terminology mapping vs. ambulance project:
-        Task      ↔  Patient
-        Day slot  ↔  Hospital
-        Schedule  ↔  Ambulance dispatch action
-    """
-
-    # ── Reward weights ──────────────────────────────────────────────────
+    # Reward weights 
     RETENTION_REWARD         =  20   # per task scheduled at the right time
     QUIZ_SCORE_REWARD        =  30   # scaled by quiz score × difficulty
     CONFIDENCE_REWARD        =   5   # small bonus for high confidence on hard tasks
@@ -56,7 +48,7 @@ class State:
 
         self.UnseededGenerator = random.Random()
 
-    # ── Task helpers ────────────────────────────────────────────────────
+    # Task helpers 
 
     def AddTask(self, task: "Task.Task"):
         self.Tasks.append(task)
@@ -69,7 +61,7 @@ class State:
         """Active tasks whose retention has decayed below threshold."""
         return [t for t in self.ActiveTasks() if t.NeedsReview()]
 
-    # ── Action generation ───────────────────────────────────────────────
+    # Action generation 
 
     def GetPossibleActions(self, SampleCount: int = 60):
         """
@@ -128,7 +120,7 @@ class State:
 
         return actions
 
-    # ── Apply a schedule ────────────────────────────────────────────────
+    # Apply a schedule 
 
     def ApplySchedule(self, Schedule: dict):
         """
@@ -144,7 +136,7 @@ class State:
                     task_map[tid].Study(sim_day)
                     task_map[tid].CheckMastered()
 
-    # ── Tick ─────────────────────────────────────────────────────────────
+    # Tick 
 
     def TimeTick(self):
         """Advance by one week: decay all retention scores."""
@@ -154,7 +146,7 @@ class State:
         for task in self.Tasks:
             task.TimeTick(self.CurrentDay)
 
-    # ── Reward ───────────────────────────────────────────────────────────
+    # Reward 
 
     def GetLongTermReward(self, Schedule: dict = None) -> float:
         """
@@ -165,7 +157,7 @@ class State:
         task_map = {t.ID: t for t in self.Tasks}
 
         if Schedule is not None:
-            # ── 1. Retention reward: scheduled at the right time ──────────
+            # 1. Retention reward: scheduled at the right time 
             for day, task_ids in Schedule.items():
                 for tid in task_ids:
                     if tid not in task_map:
@@ -174,25 +166,25 @@ class State:
                     sim_day = self.CurrentDay + day
                     days_since = sim_day - task.LastStudiedDay
 
-                    # Optimal review is when retention is near threshold (0.65–0.80)
+                    # Optimal review is when retention is near threshold (0.65 - 0.80)
                     projected_R = task.ComputeRetention(days_since)
                     if 0.55 <= projected_R <= 0.85:
                         reward += self.RETENTION_REWARD
                     elif projected_R < 0.55:
-                        # Very overdue — still good to review, smaller bonus
+                        # Very overdue - still good to review, smaller bonus
                         reward += self.RETENTION_REWARD * 0.5
                     else:
-                        # Reviewing too soon — mild penalty (memory still fresh)
+                        # Reviewing too soon - mild penalty (memory still fresh)
                         reward -= 3
 
-            # ── 2. Anti-cramming: same task on consecutive days ───────────
+            # 2. Anti-cramming: same task on consecutive days 
             for day in range(1, self.DAYS_IN_WEEK):
                 today_ids = set(Schedule.get(day,     []))
                 next_ids  = set(Schedule.get(day + 1, []))
                 overlap   = today_ids & next_ids
                 reward   += self.CRAM_PENALTY * len(overlap)
 
-            # ── 3. Overload penalty ───────────────────────────────────────
+            # 3. Overload penalty 
             for day, task_ids in Schedule.items():
                 total_hours = sum(
                     task_map[tid].TaskDuration
@@ -202,13 +194,13 @@ class State:
                 if total_hours > self.DAILY_HOUR_LIMIT:
                     reward += self.OVERLOAD_PENALTY * (total_hours - self.DAILY_HOUR_LIMIT)
 
-            # ── 4. Neglect penalty: low-retention tasks not scheduled ─────
+            # 4. Neglect penalty: low-retention tasks not scheduled 
             scheduled_ids = {tid for ids in Schedule.values() for tid in ids}
             for task in self.ActiveTasks():
                 if task.ID not in scheduled_ids and task.RetentionScore < 0.50:
                     reward += self.NEGLECT_PENALTY
 
-        # ── 5. Quiz & confidence reward (independent of schedule) ────────
+        # 5. Quiz & confidence reward (independent of schedule) 
         for task in self.Tasks:
             if task.QuizResult is not None:
                 reward += (self.QUIZ_SCORE_REWARD
@@ -225,7 +217,7 @@ class State:
 
         return reward
 
-    # ── Hashing (for QTable keys) ─────────────────────────────────────
+    # Hashing (for QTable keys) 
 
     def __hash__(self):
         tasks_tuple = tuple(
@@ -240,7 +232,7 @@ class State:
             return False
         return hash(self) == hash(other)
 
-    # ── Copy ──────────────────────────────────────────────────────────
+    # Copy 
 
     def Copy(self):
         return State(
@@ -253,10 +245,10 @@ class State:
             Seeded=copy.deepcopy(self.Seeded),
         )
 
-    # ── Display ───────────────────────────────────────────────────────
+    # Display 
 
     def __str__(self):
-        lines = [f"── Study Planner State | Week {self.WeekNumber} | Day {self.CurrentDay} ──"]
+        lines = [f"-- Study Planner State | Week {self.WeekNumber} | Day {self.CurrentDay} --"]
         lines.append("Tasks:")
         for t in self.Tasks:
             lines.append(f"  {t}")

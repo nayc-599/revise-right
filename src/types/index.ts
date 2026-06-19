@@ -34,6 +34,8 @@ export interface Topic {
   /** Optional uploaded PDF summary for this topic */
   summaryPdf?: { name: string; dataUrl: string };
   quizHistory: QuizAttempt[];
+  /** ISO datetime when topic was marked complete (e.g. from topic list) */
+  completedAt?: string | null;
 }
 
 export interface Test {

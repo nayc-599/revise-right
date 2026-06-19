@@ -1,12 +1,18 @@
 fastapi
 uvicorn[standard]
 python-multipart
+pydantic>=2
 openai
 numpy
 # RAG pipeline
+langchain
 langchain-community
 langchain-core
 langchain-text-splitters
+pypdf
 sentence-transformers
 chromadb
-pydantic>=2
+# study_scheduler app (Streamlit UI)
+pandas
+streamlit
+altair

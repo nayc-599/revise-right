@@ -7,7 +7,7 @@ import type { DayReport, Task } from '../types';
 export function exportDayReport(report: DayReport, tasks: Task[]): void {
   const doc = new jsPDF();
   doc.setFontSize(18);
-  doc.text('Revise Right — Daily Report', 20, 20);
+  doc.text('Step Flow — Daily Report', 20, 20);
   doc.setFontSize(12);
   doc.text(`Date: ${report.date}`, 20, 30);
   let y = 45;
@@ -43,7 +43,7 @@ export function exportReflectionJournal(date: string, sections: ReflectionSectio
   doc.rect(10, 10, 190, 277, 'F');
 
   doc.setFontSize(20);
-  doc.text('Revise Right — Reflection Journal', 20, 30);
+  doc.text('Step Flow — Reflection Journal', 20, 30);
   doc.setFontSize(12);
   doc.text(`Date: ${date}`, 20, 40);
 

@@ -222,18 +222,6 @@ export function HomePage() {
         backgroundPosition: 'center top',
       }}
     >
-      {/* Title sprite positioned roughly 1/3 from left, 2/3 up from bottom */}
-      <img
-        src="/sprites/revise_right_title.png"
-        alt="Revise Right"
-        className="pointer-events-none absolute z-10 w-[260px] max-w-[40vw]"
-        style={{
-          left: '33%',
-          top: '33%',
-          transform: 'translate(-50%, -50%)',
-        }}
-      />
-
       {/* Left: layout column (keeps previous positioning, no placeholder, no middle divider line) */}
       <div className="w-[55%] min-h-screen" />
 
@@ -241,7 +229,7 @@ export function HomePage() {
       <div className="flex-1 flex flex-col min-h-screen p-6 relative">
         {/* Hanging signs (only when signed in and not night-mode "only summary" - we show them in all signed-in cases) */}
         {user && (
-          <div className="absolute top-4 right-6 flex gap-3">
+          <div className="absolute top-4 right-6 flex gap-3 items-center">
             <HangingSign
               label="Add / Manage Tasks"
               onClick={() => {
@@ -348,7 +336,7 @@ export function HomePage() {
         {/* Case 5: Ended day (night mode) — Today's summary table */}
         {user && endedDate === today && (
           <div className="flex-1 pt-16">
-            <h2 className="font-pixel text-xs text-[var(--color-gold)] mb-4">
+            <h2 className="font-pixel text-xs text-[#3B1A08] mb-4">
               Today&apos;s summary
             </h2>
             <div
@@ -358,13 +346,13 @@ export function HomePage() {
                   : 'border-[var(--color-brown)]'
               }`}
             >
-              <table className="w-full font-body text-sm">
+              <table className="w-full font-body text-sm text-[#3B1A08]">
                 <thead>
                   <tr
                     className={
                       isNightMode
-                        ? 'bg-[var(--color-casino-dark)] text-[var(--color-gold)]'
-                        : 'bg-[var(--color-beige)] text-[var(--color-dark-brown)]'
+                        ? 'bg-[var(--color-casino-dark)] text-[#F5E6C8]'
+                        : 'bg-[var(--color-beige)] text-[#3B1A08]'
                     }
                   >
                     <th className="text-left p-2 font-semibold">Task</th>
@@ -381,7 +369,7 @@ export function HomePage() {
                     <tr>
                       <td
                         colSpan={3}
-                        className="p-4 text-[var(--color-brown)]"
+                        className="p-4 text-[#3B1A08]"
                       >
                         No tasks completed today.
                       </td>
@@ -396,9 +384,9 @@ export function HomePage() {
                             : 'border-t border-[var(--color-brown)] bg-[var(--color-cream)]'
                         }
                       >
-                        <td className="p-2 italic">{task.title}</td>
-                        <td className="p-2">{task.estimatedMinutes}</td>
-                        <td className="p-2">{task.actualMinutes}</td>
+                        <td className="p-2 italic text-[#3B1A08]">{task.title}</td>
+                        <td className="p-2 text-[#3B1A08]">{task.estimatedMinutes}</td>
+                        <td className="p-2 text-[#3B1A08]">{task.actualMinutes}</td>
                       </tr>
                     ))
                   )}

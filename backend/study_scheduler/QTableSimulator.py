@@ -71,6 +71,11 @@ class QTableSimulator(Simulator.Simulator):
         return BestMove
 
     def ChooseAction(self, CurrentState, PossibleActions):
+        # Exclude any candidate that schedules a task on or after its due date
+        if hasattr(CurrentState, "_schedule_violates_due_dates"):
+            PossibleActions = [a for a in PossibleActions if not CurrentState._schedule_violates_due_dates(a)]
+        if not PossibleActions:
+            return {d: [] for d in range(1, 8)}
         return self.CalculateQValue(CurrentState, PossibleActions)
 
     # ── Produce a one-shot recommended schedule ───────────────────────────
@@ -91,9 +96,9 @@ class QTableSimulator(Simulator.Simulator):
 
 if __name__ == "__main__":
     from . import State as S
-    from . import Task as T
-    from . import Confidence as C
-    from . import QuizResult as QR
+    from . import task as T
+    from . import confidence as C
+    from . import quizResult as QR
 
     state = S.State(Seed=42)
 

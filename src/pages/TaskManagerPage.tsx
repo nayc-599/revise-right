@@ -1,11 +1,17 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PixelButton } from '../components/shared/PixelButton';
-import { Modal } from '../components/shared/Modal';
 import { useTaskStore } from '../store/useTaskStore';
 import { useTestStore } from '../store/useTestStore';
 import { LOCAL_USER_ID } from '../store/useUserStore';
 import type { Task, Test, Topic } from '../types';
+import {
+  schedulerGenerate,
+  schedulerGetSchedule,
+  schedulerSaveSchedule,
+  type SchedulerTopicInput,
+} from '../api';
+import addManageBg from '../../assets/backgrounds/add_manage_tasks_background.png';
 
 type MainTab = 'tasks' | 'tests';
 
@@ -38,6 +44,13 @@ function formatDateDDMMYYYY(isoDate: string): string {
   const [y, m, d] = isoDate.split('-');
   if (!y || !m || !d) return isoDate;
   return `${d}-${m}-${y}`;
+}
+
+/** Add n days to an ISO date string (YYYY-MM-DD). */
+function addDays(isoDate: string, n: number): string {
+  const d = new Date(isoDate + 'T12:00:00');
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
 }
 
 function isOverdue(task: Task, today: string): boolean {
@@ -98,11 +111,117 @@ export function TaskManagerPage() {
   const [newTopicConfidence, setNewTopicConfidence] = useState(1);
   const [savingTopic, setSavingTopic] = useState(false);
   const [topicError, setTopicError] = useState<string | null>(null);
+  const [generatingSchedule, setGeneratingSchedule] = useState(false);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [lastGeneratedSchedule, setLastGeneratedSchedule] = useState<Record<string, number[]> | null>(null);
+  const [lastGeneratedTasks, setLastGeneratedTasks] = useState<{ id: number; name: string; duration_hours: number }[] | null>(null);
+  const [lastGeneratedWeekStart, setLastGeneratedWeekStart] = useState<string | null>(null);
+
+  useEffect(() => {
+    schedulerGetSchedule(LOCAL_USER_ID).then((data) => {
+      if (data.schedule && Object.keys(data.schedule).length > 0 && data.tasks?.length) {
+        setLastGeneratedSchedule(data.schedule);
+        setLastGeneratedTasks(data.tasks);
+        setLastGeneratedWeekStart(data.created_at?.slice(0, 10) ?? null);
+      }
+    }).catch(() => {});
+  }, []);
+
   const resetNewTopicForm = () => {
     setNewTopicName('');
     setNewTopicPdf(null);
     setNewTopicConfidence(1);
     setTopicError(null);
+  };
+
+  /** Next 7 days from today as ISO date strings (for schedule day 1..7) */
+  const getWeekDatesForSchedule = (): string[] => {
+    const dates: string[] = [];
+    const start = new Date();
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(d.getDate() + i);
+      dates.push(d.toISOString().slice(0, 10));
+    }
+    return dates;
+  };
+
+  const handleGenerateSchedule = async () => {
+    const topicInputs: SchedulerTopicInput[] = [];
+    tests.forEach((test) => {
+      (test.topics ?? []).forEach((topic) => {
+        const lastAttempt = topic.quizHistory?.length
+          ? topic.quizHistory[topic.quizHistory.length - 1]
+          : null;
+        const quizScore =
+          lastAttempt && lastAttempt.totalQuestions > 0
+            ? lastAttempt.score / lastAttempt.totalQuestions
+            : 0;
+        const confidence1to5 = Math.min(
+          5,
+          Math.max(1, Math.ceil(((topic.confidenceRating ?? 5) / 10) * 5))
+        );
+        topicInputs.push({
+          name: topic.name,
+          difficulty: 3,
+          confidence: confidence1to5,
+          quiz_score: quizScore,
+          days_since_last_study: 0,
+          duration_hours: 1,
+        });
+      });
+    });
+    if (topicInputs.length === 0) {
+      setScheduleError('Add at least one topic to generate a schedule.');
+      return;
+    }
+    setScheduleError(null);
+    setGeneratingSchedule(true);
+    try {
+      const res = await schedulerGenerate({
+        topics: topicInputs,
+        available_hours_per_day: 6,
+        clone_count: 15,
+        time_skip: 2,
+      });
+      const weekDates = getWeekDatesForSchedule();
+      const taskIdToInfo = new Map(
+        res.tasks.map((t) => [t.id, { name: t.name, duration_hours: t.duration_hours }])
+      );
+      Object.entries(res.schedule).forEach(([dayKey, taskIds]) => {
+        const dayIndex = parseInt(dayKey, 10);
+        if (Number.isNaN(dayIndex) || dayIndex < 1 || dayIndex > 7) return;
+        const date = weekDates[dayIndex - 1];
+        taskIds.forEach((schedulerTaskId) => {
+          const info = taskIdToInfo.get(schedulerTaskId);
+          if (!info) return;
+          const task: Task = {
+            id: crypto.randomUUID(),
+            userId: LOCAL_USER_ID,
+            title: info.name,
+            dueDate: date,
+            estimatedMinutes: Math.round(info.duration_hours * 60),
+            actualMinutes: 0,
+            status: 'pending',
+            requiresTaskIds: [],
+            isAutoGenerated: true,
+            createdAt: new Date().toISOString(),
+          };
+          addTask(task);
+        });
+      });
+      await schedulerSaveSchedule(LOCAL_USER_ID, {
+        schedule: res.schedule,
+        tasks: res.tasks,
+      });
+      setLastGeneratedSchedule(res.schedule);
+      setLastGeneratedTasks(res.tasks);
+      setLastGeneratedWeekStart(weekDates[0] ?? null);
+    } catch (e) {
+      setScheduleError(e instanceof Error ? e.message : 'Failed to generate schedule');
+    } finally {
+      setGeneratingSchedule(false);
+    }
   };
 
   const visibleTasks = useMemo(
@@ -250,7 +369,15 @@ export function TaskManagerPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-[var(--color-cream)] text-[var(--color-dark-brown)] font-body">
+    <div
+      className="min-h-[calc(100vh-64px)] bg-[var(--color-cream)] text-[var(--color-dark-brown)] font-body"
+      style={{
+        backgroundImage: `url(${addManageBg})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
       <div className="max-w-6xl mx-auto p-4 sm:p-6 flex flex-col h-[calc(100vh-64px)]">
         <div className="flex items-center justify-between gap-3 mb-4 shrink-0">
           <div>
@@ -378,7 +505,7 @@ export function TaskManagerPage() {
 
                 {mainTab === 'tests' && (
                   <div className="flex flex-col h-full space-y-4">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
                       <PixelButton
                         label="+ Add test"
                         variant="primary"
@@ -387,10 +514,26 @@ export function TaskManagerPage() {
                           openDetail({ kind: 'new-test', label: 'New Test' });
                         }}
                       />
+                      <PixelButton
+                        label="Generate Schedule"
+                        variant="secondary"
+                        onClick={handleGenerateSchedule}
+                        disabled={generatingSchedule}
+                      />
                       <p className="text-sm text-[var(--color-brown)]">
                         Add a test, then expand it to add topics.
                       </p>
                     </div>
+                    {generatingSchedule && (
+                      <div className="text-sm text-[var(--color-brown)]">
+                        Generating schedule…
+                      </div>
+                    )}
+                    {scheduleError && (
+                      <div className="text-sm text-[var(--color-casino-red)]">
+                        {scheduleError}
+                      </div>
+                    )}
 
                     <div className="flex-1 min-h-0 overflow-auto pr-1">
                       {sortedTests.length === 0 ? (
@@ -495,18 +638,20 @@ export function TaskManagerPage() {
                                                 {topic.summaryPdf?.name ? ` · ${topic.summaryPdf.name}` : ''}
                                               </div>
                                             </div>
-                                            <PixelButton
-                                              label="Edit"
-                                              variant="secondary"
-                                              onClick={() =>
-                                                openDetail({
-                                                  kind: 'edit-topic',
-                                                  label: 'Edit Topic',
-                                                  testId: test.id,
-                                                  topicId: topic.id,
-                                                })
-                                              }
-                                            />
+                                            <div className="flex items-center gap-2 shrink-0">
+                                              <PixelButton
+                                                label="Edit"
+                                                variant="secondary"
+                                                onClick={() =>
+                                                  openDetail({
+                                                    kind: 'edit-topic',
+                                                    label: 'Edit Topic',
+                                                    testId: test.id,
+                                                    topicId: topic.id,
+                                                  })
+                                                }
+                                              />
+                                            </div>
                                           </li>
                                         ))
                                       )}
@@ -675,7 +820,7 @@ export function TaskManagerPage() {
                         <div className="text-sm text-[var(--color-casino-red)]">{topicError}</div>
                       )}
                       <PixelButton
-                        label="Save & Generate study schedule"
+                        label="Save"
                         variant="primary"
                         onClick={handleSaveTopic}
                         disabled={!newTopicName.trim() || savingTopic}
@@ -757,30 +902,59 @@ export function TaskManagerPage() {
                     if (!test) {
                       return <div className="text-sm text-[var(--color-brown)]">Test not found.</div>;
                     }
+                    const topics = test.topics ?? [];
+                    if (topics.length === 0) {
+                      return (
+                        <div className="space-y-3">
+                          <div className="text-sm text-[var(--color-brown)]">
+                            No sessions added yet
+                          </div>
+                        </div>
+                      );
+                    }
+                    let globalIndex = 1;
+                    const testStartIndex = (() => {
+                      for (const t of tests) {
+                        if (t.id === test.id) return globalIndex;
+                        globalIndex += (t.topics ?? []).length;
+                      }
+                      return globalIndex;
+                    })();
+                    const weekStart = lastGeneratedWeekStart;
+                    const schedule = lastGeneratedSchedule;
+                    const scheduleTasks = lastGeneratedTasks;
                     return (
                       <div className="space-y-3">
-                        {(test.revisionSchedule ?? []).length === 0 ? (
-                          <div className="text-sm text-[var(--color-brown)]">
-                            Add topics to create revision plan
-                          </div>
-                        ) : (
-                          <ul className="space-y-2">
-                            {(test.revisionSchedule ?? [])
-                              .slice()
-                              .sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate))
-                              .map((s) => (
-                                <li
-                                  key={s.id}
-                                  className="p-3 rounded border-2 border-[var(--color-brown)] bg-[var(--color-beige)]"
-                                >
-                                  <div className="text-sm font-semibold">{s.scheduledDate}</div>
-                                  <div className="text-xs text-[var(--color-brown)]">
-                                    Topic: {s.topicId} · {s.durationMinutes} min · Review #{s.reviewNumber}
-                                  </div>
-                                </li>
-                              ))}
-                          </ul>
-                        )}
+                        <ul className="space-y-2">
+                          {topics.map((topic, i) => {
+                            const idx = testStartIndex + i;
+                            let scheduledDate: string | null = null;
+                            if (schedule && weekStart) {
+                              for (let day = 1; day <= 7; day++) {
+                                const dayKey = String(day);
+                                if ((schedule[dayKey] ?? []).includes(idx)) {
+                                  scheduledDate = addDays(weekStart, day - 1);
+                                  break;
+                                }
+                              }
+                            }
+                            const durationMinutes = scheduleTasks?.[idx - 1] != null
+                              ? Math.round(scheduleTasks[idx - 1].duration_hours * 60)
+                              : null;
+                            return (
+                              <li
+                                key={topic.id}
+                                className="text-sm text-[var(--color-dark-brown)]"
+                              >
+                                {topic.name}
+                                {' · '}
+                                {durationMinutes != null ? `${durationMinutes} min` : '—'}
+                                {' · '}
+                                {scheduledDate != null ? formatDateDDMMYYYY(scheduledDate) : 'Not scheduled'}
+                              </li>
+                            );
+                          })}
+                        </ul>
                       </div>
                     );
                   })()}

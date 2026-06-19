@@ -20,14 +20,13 @@ sys.path.insert(0, str(BACKEND_DIR))
 
 from rag_quiz_system.pipeline import run_quiz_pipeline
 
-# ----- study_scheduler temporarily disabled so server can start; re-enable once import issues are fixed -----
-# from study_scheduler.State import State
-# from study_scheduler.task import Task as SchedulerTask
-# from study_scheduler.confidence import Confidence
-# from study_scheduler.quizResult import QuizResult
-# from study_scheduler.QTableSimulator import QTableSimulator
+from study_scheduler.State import State
+from study_scheduler.task import Task as SchedulerTask
+from study_scheduler.confidence import Confidence
+from study_scheduler.quizResult import QuizResult
+from study_scheduler.QTableSimulator import QTableSimulator
 
-app = FastAPI(title="Revise Right API")
+app = FastAPI(title="Step Flow API")
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 app.add_middleware(
@@ -74,6 +73,12 @@ def init_db():
                 created_at TEXT NOT NULL
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS task_understanding (
+                task_id TEXT PRIMARY KEY,
+                rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5)
+            )
+        """)
 
 
 init_db()
@@ -89,20 +94,22 @@ class QuizScoreBody(BaseModel):
     timestamp: str
 
 
-# ----- study_scheduler temporarily disabled -----
-# class SchedulerTopicInput(BaseModel):
-#     name: str
-#     difficulty: int  # 1-5
-#     confidence: int  # 1-5
-#     quiz_score: float  # 0-1
-#     days_since_last_study: int
-#     duration_hours: float
-#
-# class SchedulerGenerateBody(BaseModel):
-#     topics: list[SchedulerTopicInput]
-#     available_hours_per_day: float = 6.0
-#     clone_count: int = 15
-#     time_skip: int = 2
+class SchedulerTopicInput(BaseModel):
+    name: str
+    difficulty: int  # 1-5
+    confidence: int  # 1-5
+    quiz_score: float | None = None  # 0-1; default 0 if missing
+    days_since_last_study: int
+    duration_hours: float
+    due_date: str | None = None  # ISO date (YYYY-MM-DD); no revision on or after this day
+
+
+class SchedulerGenerateBody(BaseModel):
+    topics: list[SchedulerTopicInput]
+    planning_week_start: str | None = None  # ISO date for day 1 of the planning week
+    available_hours_per_day: float = 6.0
+    clone_count: int = 15
+    time_skip: int = 2
 
 
 # ─── Routes ───────────────────────────────────────────────────────────────
@@ -135,71 +142,103 @@ async def api_quiz_score(body: QuizScoreBody):
     return {"success": True}
 
 
-# ----- study_scheduler routes temporarily disabled; re-enable once import issues are fixed -----
-# @app.post("/api/scheduler/generate")
-# async def api_scheduler_generate(body: SchedulerGenerateBody):
-#     if not body.topics:
-#         return {"schedule": {}, "tasks": []}
-#     try:
-#         tasks = []
-#         for i, t in enumerate(body.topics):
-#             conf = Confidence(t.confidence) if 1 <= t.confidence <= 5 else None
-#             quiz = QuizResult(max(0, min(1, t.quiz_score))) if t.quiz_score is not None else None
-#             task = SchedulerTask(
-#                 ID=i + 1,
-#                 TaskName=t.name,
-#                 TaskDuration=t.duration_hours,
-#                 TaskDifficultyLevel=max(1, min(5, t.difficulty)),
-#                 TaskConfidence=conf,
-#                 TaskQuizResult=quiz,
-#                 RetentionScore=1.0,
-#                 LastStudiedDay=-t.days_since_last_study,
-#                 StudyHistory=[],
-#                 Mastered=False,
-#             )
-#             task.RetentionScore = task.ComputeRetention(t.days_since_last_study)
-#             task.CheckMastered()
-#             tasks.append(task)
-#         state = State(Tasks=tasks, Seed=42, Seeded=True)
-#         sim = QTableSimulator(
-#             state,
-#             LearningRate=0.1,
-#             TimeSkip=body.time_skip,
-#             Discount=0.9,
-#             CloneCount=body.clone_count,
-#         )
-#         schedule = sim.RecommendWeek()
-#         schedule_serializable = {str(k): v for k, v in schedule.items()}
-#         tasks_info = [{"id": t.ID, "name": t.TaskName, "duration_hours": t.TaskDuration} for t in tasks]
-#         return {"schedule": schedule_serializable, "tasks": tasks_info}
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-#
-# @app.get("/api/scheduler/schedule/{user_id}")
-# async def api_scheduler_schedule(user_id: str):
-#     with get_db() as conn:
-#         row = conn.execute(
-#             "SELECT schedule_json, created_at FROM schedules WHERE user_id = ? ORDER BY created_at DESC LIMIT 1",
-#             (user_id,),
-#         ).fetchone()
-#     if not row:
-#         return {"schedule": {}, "tasks": [], "created_at": None}
-#     data = json.loads(row[0])
-#     return {"schedule": data.get("schedule", {}), "tasks": data.get("tasks", []), "created_at": row[1]}
-#
-# @app.post("/api/scheduler/schedule/{user_id}")
-# async def api_scheduler_save_schedule(user_id: str, payload: dict):
-#     try:
-#         with get_db() as conn:
-#             conn.execute(
-#                 "INSERT INTO schedules (id, user_id, schedule_json, created_at) VALUES (?, ?, ?, ?)",
-#                 (str(uuid.uuid4()), user_id, json.dumps(payload), datetime.utcnow().isoformat() + "Z"),
-#             )
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-#     return {"success": True}
+class TaskUnderstandingBody(BaseModel):
+    rating: int  # 1-5
+
+
+@app.patch("/api/tasks/{task_id}/understanding")
+async def api_task_understanding(task_id: str, body: TaskUnderstandingBody):
+    if not (1 <= body.rating <= 5):
+        raise HTTPException(status_code=400, detail="rating must be between 1 and 5")
+    try:
+        with get_db() as conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO task_understanding (task_id, rating) VALUES (?, ?)",
+                (task_id, body.rating),
+            )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    return {"success": True}
+
+
+def _iso_date(s: str | None):
+    """Return first 10 chars (YYYY-MM-DD) or None."""
+    if not s:
+        return None
+    return s.strip()[:10] if isinstance(s, str) else None
+
+
+@app.post("/api/scheduler/generate")
+async def api_scheduler_generate(body: SchedulerGenerateBody):
+    if not body.topics:
+        return {"schedule": {}, "tasks": []}
+    try:
+        today = datetime.utcnow().date().isoformat()
+        week_start = _iso_date(body.planning_week_start) or today
+        tasks = []
+        for i, t in enumerate(body.topics):
+            quiz_score = t.quiz_score if t.quiz_score is not None else 0.0
+            conf = Confidence(t.confidence) if 1 <= t.confidence <= 5 else None
+            quiz = QuizResult(max(0, min(1, quiz_score)))
+            due = _iso_date(t.due_date) if getattr(t, "due_date", None) else None
+            task = SchedulerTask(
+                ID=i + 1,
+                TaskName=t.name,
+                TaskDuration=t.duration_hours,
+                TaskDifficultyLevel=max(1, min(5, t.difficulty)),
+                TaskConfidence=conf,
+                TaskQuizResult=quiz,
+                RetentionScore=1.0,
+                LastStudiedDay=-t.days_since_last_study,
+                StudyHistory=[],
+                Mastered=False,
+                due_date=due,
+            )
+            task.RetentionScore = task.ComputeRetention(t.days_since_last_study)
+            task.CheckMastered()
+            tasks.append(task)
+        state = State(Tasks=tasks, Seed=42, Seeded=True, WeekStart=week_start)
+        sim = QTableSimulator(
+            state,
+            LearningRate=0.1,
+            TimeSkip=body.time_skip,
+            Discount=0.9,
+            CloneCount=body.clone_count,
+        )
+        schedule = sim.RecommendWeek()
+        schedule_serializable = {str(k): v for k, v in schedule.items()}
+        tasks_info = [{"id": t.ID, "name": t.TaskName, "duration_hours": t.TaskDuration} for t in tasks]
+        return {"schedule": schedule_serializable, "tasks": tasks_info}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/scheduler/schedule/{user_id}")
+async def api_scheduler_schedule(user_id: str):
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT schedule_json, created_at FROM schedules WHERE user_id = ? ORDER BY created_at DESC LIMIT 1",
+            (user_id,),
+        ).fetchone()
+    if not row:
+        return {"schedule": {}, "tasks": [], "created_at": None}
+    data = json.loads(row[0])
+    return {"schedule": data.get("schedule", {}), "tasks": data.get("tasks", []), "created_at": row[1]}
+
+
+@app.post("/api/scheduler/schedule/{user_id}")
+async def api_scheduler_save_schedule(user_id: str, payload: dict):
+    try:
+        with get_db() as conn:
+            conn.execute(
+                "INSERT INTO schedules (id, user_id, schedule_json, created_at) VALUES (?, ?, ?, ?)",
+                (str(uuid.uuid4()), user_id, json.dumps(payload), datetime.utcnow().isoformat() + "Z"),
+            )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    return {"success": True}
 
 
 @app.get("/")
 async def root():
-    return {"message": "Revise Right API"}
+    return {"message": "Step Flow API"}

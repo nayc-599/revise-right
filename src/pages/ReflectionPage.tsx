@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CatSprite } from '../components/shared/CatSprite';
+import cat5 from '../../assets/elements/cat_5.png';
 import { PixelButton } from '../components/shared/PixelButton';
 import { exportReflectionJournal, type ReflectionSection } from '../utils/pdfExport';
 
@@ -123,7 +123,7 @@ export function ReflectionPage() {
       <h2 className="font-pixel text-sm text-[var(--color-dark-brown)] mb-2">
         Reflection
       </h2>
-      <CatSprite variant="sitting" size={64} className="mb-4" />
+      <img src={cat5} alt="" width={64} height={64} className="mb-4 object-contain" />
 
       {!mode && (
         <div className="space-y-4">

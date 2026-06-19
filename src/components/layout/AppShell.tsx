@@ -13,13 +13,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <header className="border-b-4 border-[var(--color-brown)] bg-[var(--color-beige)] px-4 py-3 flex items-center justify-between flex-wrap gap-2">
           <span className="font-pixel text-sm sm:text-base text-[var(--color-dark-brown)]">
             {isTasks ? (
-              'Revise Right'
+              'Step Flow'
             ) : (
               <Link
                 to="/"
                 className="hover:opacity-90 focus-visible:outline focus-visible:outline-2 rounded"
               >
-                Revise Right
+                Step Flow
               </Link>
             )}
           </span>

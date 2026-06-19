@@ -1,14 +1,16 @@
 import copy
 import random
 import math
+from datetime import datetime, timedelta
 from . import IDGenerator
-from . import Task
-from . import Confidence
-from . import QuizResult
+from . import task as Task
+from . import confidence as Confidence
+from . import quizResult as QuizResult
 
 class State:
 
     # Reward weights 
+    DUE_DATE_VIOLATION_PENALTY = -1000  # per task scheduled on or after its due date
     RETENTION_REWARD         =  20   # per task scheduled at the right time
     QUIZ_SCORE_REWARD        =  30   # scaled by quiz score × difficulty
     CONFIDENCE_REWARD        =   5   # small bonus for high confidence on hard tasks
@@ -28,13 +30,15 @@ class State:
                  IDGen=None,
                  Seed=None,
                  SeededGeneratorState=None,
-                 Seeded: bool = True):
+                 Seeded: bool = True,
+                 WeekStart: str | None = None):
 
         self.Tasks       = [t.Copy() for t in Tasks] if Tasks else []
         self.CurrentDay  = CurrentDay
         self.WeekNumber  = WeekNumber
         self.IDGenerator = IDGen if IDGen else IDGenerator.IDGenerator()
         self.Seeded      = Seeded
+        self.WeekStart   = WeekStart  # ISO date (YYYY-MM-DD) for day 1 of the planning week
 
         if Seed is not None:
             self.Seed = Seed
@@ -60,6 +64,44 @@ class State:
     def NeedsReviewTasks(self):
         """Active tasks whose retention has decayed below threshold."""
         return [t for t in self.ActiveTasks() if t.NeedsReview()]
+
+    def _date_for_day(self, day: int) -> str | None:
+        """Return ISO date (YYYY-MM-DD) for the given day index (1-7), or None if WeekStart not set."""
+        if not self.WeekStart or day < 1 or day > self.DAYS_IN_WEEK:
+            return None
+        try:
+            d = datetime.strptime(self.WeekStart[:10], "%Y-%m-%d").date()
+            d = d + timedelta(days=day - 1)
+            return d.isoformat()
+        except (ValueError, TypeError):
+            return None
+
+    def _task_due_date(self, task) -> str | None:
+        """Return task due_date as YYYY-MM-DD string, or None."""
+        due = getattr(task, "due_date", None)
+        if due is None:
+            return None
+        if hasattr(due, "isoformat"):
+            return due.isoformat()[:10]
+        return str(due).strip()[:10] if due else None
+
+    def _schedule_violates_due_dates(self, schedule: dict) -> bool:
+        """True if any task is scheduled on a day on or after its due date."""
+        if not self.WeekStart:
+            return False
+        task_map = {t.ID: t for t in self.Tasks}
+        for day, task_ids in schedule.items():
+            day_date = self._date_for_day(day)
+            if day_date is None:
+                continue
+            for tid in task_ids:
+                if tid not in task_map:
+                    continue
+                task = task_map[tid]
+                due = self._task_due_date(task)
+                if due is not None and day_date >= due:
+                    return True
+        return False
 
     # Action generation 
 
@@ -90,8 +132,13 @@ class State:
             rng.shuffle(shuffled)
 
             for task in shuffled:
-                # Prefer days where retention is low (needs review)
+                # Prefer days where retention is low (needs review); exclude days on or after due date
                 candidate_days = list(range(1, self.DAYS_IN_WEEK + 1))
+                due = self._task_due_date(task)
+                if due and self.WeekStart:
+                    candidate_days = [d for d in candidate_days if self._date_for_day(d) is not None and self._date_for_day(d) < due]
+                if not candidate_days:
+                    continue
                 rng.shuffle(candidate_days)
 
                 placed = False
@@ -103,13 +150,16 @@ class State:
                         placed = True
                         break
 
-                # If no day fits within soft limit, place on least-loaded day
+                # If no day fits within soft limit, place on least-loaded valid day
                 if not placed:
                     lightest = min(candidate_days, key=lambda d: daily_hours[d])
                     if len(schedule[lightest]) < self.MAX_TASKS_PER_DAY:
                         schedule[lightest].append(task.ID)
                         daily_hours[lightest] += task.TaskDuration
 
+            # Reject schedule if it violates due dates (defence in depth)
+            if self._schedule_violates_due_dates(schedule):
+                continue
             # Convert to hashable key to deduplicate
             key = tuple(
                 (d, tuple(sorted(schedule[d]))) for d in range(1, self.DAYS_IN_WEEK + 1)
@@ -157,6 +207,20 @@ class State:
         task_map = {t.ID: t for t in self.Tasks}
 
         if Schedule is not None:
+            # 0. Due-date violation: large penalty for any task scheduled on or after its due date
+            if self.WeekStart:
+                task_map_for_due = {t.ID: t for t in self.Tasks}
+                for day, task_ids in Schedule.items():
+                    day_date = self._date_for_day(day)
+                    if day_date is None:
+                        continue
+                    for tid in task_ids:
+                        if tid not in task_map_for_due:
+                            continue
+                        task = task_map_for_due[tid]
+                        due = self._task_due_date(task)
+                        if due is not None and day_date >= due:
+                            reward += self.DUE_DATE_VIOLATION_PENALTY
             # 1. Retention reward: scheduled at the right time 
             for day, task_ids in Schedule.items():
                 for tid in task_ids:
@@ -243,6 +307,7 @@ class State:
             Seed=copy.deepcopy(self.Seed),
             SeededGeneratorState=self.SeededGenerator.getstate(),
             Seeded=copy.deepcopy(self.Seeded),
+            WeekStart=copy.deepcopy(self.WeekStart),
         )
 
     # Display 

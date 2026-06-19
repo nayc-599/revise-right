@@ -1,7 +1,7 @@
 import math
 import copy
-from . import Confidence
-from . import QuizResult
+from . import confidence as Confidence
+from . import quizResult as QuizResult
 
 class Task:
     """
@@ -32,7 +32,8 @@ class Task:
                  RetentionScore: float = 1.0,
                  LastStudiedDay: int = 0,      # simulated day index when last studied
                  StudyHistory: list = None,    # list of day indices when studied
-                 Mastered: bool = False):
+                 Mastered: bool = False,
+                 due_date=None):              # optional ISO date (YYYY-MM-DD) or date; revision must be before this day
 
         self.ID                 = ID
         self.TaskName           = TaskName
@@ -44,6 +45,7 @@ class Task:
         self.LastStudiedDay     = LastStudiedDay
         self.StudyHistory       = StudyHistory[:] if StudyHistory else []
         self.Mastered           = Mastered
+        self.due_date           = due_date
 
     # ------------------------------------------------------------------
     # Stability: how long (in days) a memory is expected to last.
@@ -127,4 +129,5 @@ class Task:
             copy.deepcopy(self.LastStudiedDay),
             copy.deepcopy(self.StudyHistory),
             copy.deepcopy(self.Mastered),
+            copy.deepcopy(self.due_date),
         )

@@ -5,7 +5,7 @@ import { PixelButton } from '../components/shared/PixelButton';
 import { quizScore } from '../api';
 import { LOCAL_USER_ID } from '../store/useUserStore';
 
-const ADVANCE_DELAY_MS = 1300;
+const ADVANCE_DELAY_MS = 1500;
 
 export function QuizPage() {
   const navigate = useNavigate();

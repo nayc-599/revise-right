@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CatSprite } from '../components/shared/CatSprite';
+import cat3 from '../../assets/elements/cat_3.png';
+import cat4 from '../../assets/elements/cat_4.png';
 import { PixelButton } from '../components/shared/PixelButton';
 import { useTaskStore } from '../store/useTaskStore';
 import { useDayStore } from '../store/useDayStore';
@@ -57,7 +58,7 @@ export function GoodnightPage() {
               key={task.id}
               className="flex items-center gap-4 p-3 rounded border-2 border-[var(--color-brown)] bg-[var(--color-cream)]"
             >
-              <CatSprite variant="walking" size={48} />
+              <img src={cat3} alt="" width={48} height={48} className="object-contain" />
               <div className="flex-1 min-w-0">
                 <div className="font-body italic text-[var(--color-dark-brown)] truncate">
                   {task.title}
@@ -70,14 +71,7 @@ export function GoodnightPage() {
           ))
         )}
         <div className="flex items-center gap-4 p-3 rounded border-2 border-[var(--color-saloon-wood)] bg-[var(--color-beige)]">
-          <img
-            src="/sprites/bed.svg"
-            alt="Bed"
-            width={96}
-            height={48}
-            style={{ imageRendering: 'pixelated' }}
-          />
-          <CatSprite variant="sleeping" size={48} />
+          <img src={cat4} alt="" width={48} height={48} className="object-contain" />
           <span className="font-pixel text-[10px] text-[var(--color-dark-brown)]">
             Zzz...
           </span>

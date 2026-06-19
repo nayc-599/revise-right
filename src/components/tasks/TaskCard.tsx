@@ -1,4 +1,6 @@
 import type { Task } from '../../types';
+import wantedPosterBg from '../../../assets/elements/wanted_poster.png';
+import bulletHoleImg from '../../../assets/elements/bullet_hole.png';
 
 type Variant = 'list' | 'wanted-poster' | 'wheel-segment';
 
@@ -9,6 +11,7 @@ interface TaskCardProps {
   onDragStart?: (e: React.DragEvent, taskId: string) => void;
   onClick?: () => void;
   completed?: boolean;
+  selected?: boolean;
 }
 
 export function TaskCard({
@@ -18,6 +21,7 @@ export function TaskCard({
   onDragStart,
   onClick,
   completed = false,
+  selected = false,
 }: TaskCardProps) {
   const isLocked = task.requiresTaskIds.length > 0;
 
@@ -58,25 +62,45 @@ export function TaskCard({
         onKeyDown={(e) => {
           if (e.key === 'Enter' && !completed && onClick) onClick();
         }}
-        className={`border-4 border-[var(--color-brown)] rounded p-3 font-body text-center min-w-[140px] ${
+        className={`border-4 rounded p-4 font-body text-center w-[400px] relative overflow-hidden ${
           completed
-            ? 'bg-[var(--color-brown)]/20 opacity-60 pointer-events-none'
-            : 'bg-[var(--color-beige)] shadow-[4px_4px_0_var(--color-pixel-shadow)] cursor-pointer hover:brightness-105'
+            ? 'border-[var(--color-brown)] opacity-60 pointer-events-none'
+            : selected
+              ? 'border-[var(--color-dark-brown)] shadow-[4px_4px_0_var(--color-pixel-shadow)] cursor-pointer'
+              : 'border-[var(--color-brown)] shadow-[4px_4px_0_var(--color-pixel-shadow)] cursor-pointer hover:brightness-105'
         }`}
-        style={completed ? undefined : { boxShadow: '4px 4px 0 var(--color-pixel-shadow)' }}
+        style={{
+          backgroundImage: `url(${wantedPosterBg})`,
+          backgroundSize: '100% 100%',
+          backgroundRepeat: 'no-repeat',
+          ...(completed ? {} : { boxShadow: '4px 4px 0 var(--color-pixel-shadow)' }),
+        }}
       >
-        <div className="font-pixel text-[8px] text-[var(--color-dark-brown)] mb-2 tracking-wider">
-          WANTED
-        </div>
-        <div className="text-[var(--color-dark-brown)] italic text-sm truncate">
-          {task.title}
-        </div>
-        <div className="text-[var(--color-brown)] text-xs mt-1">
-          {task.estimatedMinutes} min
+        <div className="relative flex flex-col items-center justify-center min-h-[200px]">
+          <div className="font-pixel text-[10px] mb-2 tracking-wider text-[#3B1A08]">
+          </div>
+          <div className="italic text-base truncate text-[#3B1A08] text-center max-w-full">
+            {task.title}
+          </div>
+          <div className="text-sm mt-1 text-[#3B1A08]">
+            {task.estimatedMinutes} min
+          </div>
         </div>
         {completed && (
-          <div className="mt-2 font-pixel text-[8px] text-[var(--color-casino-red)]">
-            GOT &apos;EM
+          <div
+            className="absolute pointer-events-none w-[40%] aspect-square"
+            style={{
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+            }}
+            aria-hidden
+          >
+            <img
+              src={bulletHoleImg}
+              alt=""
+              className="w-full h-full object-contain"
+            />
           </div>
         )}
       </div>

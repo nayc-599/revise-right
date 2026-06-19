@@ -9,6 +9,7 @@ interface TestStore {
   addTopic: (testId: string, topic: Topic) => void;
   editTopic: (testId: string, topicId: string, updates: Partial<Topic>) => void;
   removeTopic: (testId: string, topicId: string) => void;
+  markTopicComplete: (testId: string, topicId: string) => void;
   saveQuizAttempt: (
     testId: string,
     topicId: string,
@@ -65,6 +66,22 @@ export const useTestStore = create<TestStore>((set) => ({
       tests: state.tests.map((t) =>
         t.id === testId
           ? { ...t, topics: (t.topics ?? []).filter((top) => top.id !== topicId) }
+          : t
+      ),
+    })),
+
+  markTopicComplete: (testId, topicId) =>
+    set((state) => ({
+      tests: state.tests.map((t) =>
+        t.id === testId
+          ? {
+              ...t,
+              topics: (t.topics ?? []).map((top) =>
+                top.id === topicId
+                  ? { ...top, completedAt: new Date().toISOString() }
+                  : top
+              ),
+            }
           : t
       ),
     })),

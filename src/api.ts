@@ -13,6 +13,7 @@ export type QuizQuestion = {
 export async function quizGenerate(pdfFile: File): Promise<QuizQuestion[]> {
   const form = new FormData();
   form.append('pdf_file', pdfFile);
+  form.append('filename', pdfFile.name);
   const res = await fetch(`${BASE}/api/quiz/generate`, {
     method: 'POST',
     body: form,
@@ -39,6 +40,19 @@ export async function quizScore(payload: QuizScorePayload): Promise<{ success: b
     body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error('Failed to save score');
+  return res.json();
+}
+
+export async function patchTaskUnderstanding(
+  taskId: string,
+  rating: number
+): Promise<{ success: boolean }> {
+  const res = await fetch(`${BASE}/api/tasks/${encodeURIComponent(taskId)}/understanding`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rating }),
+  });
+  if (!res.ok) throw new Error('Failed to save understanding');
   return res.json();
 }
 

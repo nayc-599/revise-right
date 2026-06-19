@@ -4,8 +4,9 @@ import { useGameStore } from '../store/useGameStore';
 import { useTaskStore } from '../store/useTaskStore';
 import type { GameMode, Task } from '../types';
 import { PixelButton } from '../components/shared/PixelButton';
-import { CatSprite } from '../components/shared/CatSprite';
 import { Modal } from '../components/shared/Modal';
+import cat1 from '../../assets/elements/cat_1.png';
+import cat2 from '../../assets/elements/cat_2.png';
 
 export function GameChoicePage() {
   const navigate = useNavigate();
@@ -68,7 +69,7 @@ export function GameChoicePage() {
           className="flex flex-col items-center gap-4 p-6 rounded-lg border-4 border-[var(--color-saloon-wood)] bg-[var(--color-saloon-tan)] hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-gold)]"
           aria-label="Play shooting game: Hit me with your best shot"
         >
-          <CatSprite variant="cowboy" size={80} />
+          <img src={cat1} alt="" width={80} height={80} className="object-contain" />
           <span className="font-pixel text-xs text-[var(--color-dark-brown)]">
             Hit me with your best shot
           </span>
@@ -83,7 +84,7 @@ export function GameChoicePage() {
           className="flex flex-col items-center gap-4 p-6 rounded-lg border-4 border-[var(--color-casino-dark)] bg-[var(--color-beige)] hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-gold)]"
           aria-label="Play wheel game: You spin me right round"
         >
-          <CatSprite variant="sitting" size={80} />
+          <img src={cat2} alt="" width={80} height={80} className="object-contain" />
           <span className="font-pixel text-xs text-[var(--color-dark-brown)]">
             You spin me right round
           </span>
